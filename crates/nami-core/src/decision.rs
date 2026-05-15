@@ -1,63 +1,82 @@
-//! The scheduler's output: a decision to start at a specific time, or a
-//! refusal with a stated reason.
+//! Scheduler output: a decision to run at a specific time, run immediately,
+//! or refuse with a stated reason.
 //!
-//! These types are part of the trait surface between `nami-scheduler` and
-//! `nami-cli`. They are intentionally small and explicit: every reason for
-//! starting now versus deferring, and every reason for refusing to schedule,
-//! is named.
+//! Per `CLAUDE.md`, refusing is a first-class outcome — the scheduler must
+//! refuse rather than invent numbers when data is missing, stale, sparse,
+//! or below the materiality threshold.
 
 use serde::{Deserialize, Serialize};
-use time::{Duration, OffsetDateTime};
+use time::OffsetDateTime;
 
-use crate::carbon::CarbonIntensity;
-use crate::region::Region;
+use crate::confidence::Confidence;
 
-/// Why the scheduler decided to start at a particular instant.
+/// Why the scheduler picked a start time (or chose to run immediately).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StartReason {
-    /// The chosen window is the cleanest contiguous window before the deadline.
-    CleanestWindow,
-    /// No forecast data was available; running immediately is the honest
-    /// fallback.
-    NoForecastFellBackToNow,
-    /// The deadline is so tight that no deferral was possible.
-    DeadlineTooTight,
+    /// The selected window has the lowest estimated mean intensity among
+    /// candidates and beats run-now by at least the materiality threshold.
+    LowestEstimatedIntensity,
+    /// Running now is already the cleanest option among candidates.
+    RunNowAlreadyCleanest,
+    /// The deadline leaves no room to defer.
+    DeadlineTooSoon,
+    /// A fallback policy (e.g., no provider available) defaulted to
+    /// running immediately.
+    FallbackPolicyRunImmediately,
+    /// The user passed an explicit override flag.
+    UserForced,
 }
 
-/// Why the scheduler refused to produce a schedule at all.
-///
-/// Refusal is a first-class outcome: per the design principle of not
-/// silently estimating, the scheduler must refuse rather than guess.
+/// Why the scheduler refused to produce a schedule.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind", content = "detail")]
 pub enum RefuseReason {
-    /// The region was unsupported by every available provider.
-    RegionUnsupported(Region),
-    /// All providers failed and `--strict` (or equivalent) was set, so we
-    /// refuse rather than fall back to "run now."
-    AllProvidersFailed(String),
-    /// The job spec itself was invalid (caught by the scheduler rather than
-    /// at parse time).
-    InvalidSpec(String),
+    /// No provider declared support for the requested region.
+    UnsupportedRegion,
+    /// Historical data is required for the forecast model but is missing.
+    MissingHistoricalData,
+    /// The historical cache is older than the configured staleness bound.
+    StaleHistoricalCache,
+    /// Too few samples to produce a defensible estimate.
+    InsufficientSamples,
+    /// All providers (or the only required one) failed.
+    ProviderUnavailable,
+    /// No candidate window fits before the deadline.
+    NoWindowBeforeDeadline,
+    /// Best candidate's improvement over run-now is below the materiality
+    /// threshold.
+    CandidateWindowsBelowMaterialityThreshold,
+    /// Forecast confidence is too low to justify a recommendation.
+    ForecastTooUncertain,
 }
 
-/// The scheduler's verdict on a [`JobSpec`](crate::JobSpec).
+/// The scheduler's verdict.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 pub enum SchedulingDecision {
-    /// Run the job, starting at `start`.
-    Run {
+    /// Defer the run to `start_time`.
+    StartAt {
         /// UTC instant at which the wrapped command should be spawned.
-        start: OffsetDateTime,
-        /// Expected duration; the scheduler echoes back the job spec's
-        /// estimate so downstream code does not need to look it up.
-        duration: Duration,
+        start_time: OffsetDateTime,
         /// Why this start time was chosen.
         reason: StartReason,
-        /// The mean expected intensity over the chosen window, if known.
-        expected_mean_intensity: Option<CarbonIntensity>,
+        /// Confidence in the decision.
+        confidence: Confidence,
     },
-    /// Do not schedule. The caller must surface this loudly to the user.
-    Refuse(RefuseReason),
+    /// Run immediately. This is a positive outcome (not an error) — it
+    /// just means the scheduler couldn't find a materially cleaner window.
+    StartImmediately {
+        /// Why running immediately is the right call.
+        reason: StartReason,
+        /// Confidence in the decision (often `Low` here — a fallback to
+        /// run-now means the model didn't have enough signal to defer).
+        confidence: Confidence,
+    },
+    /// Refuse to schedule. The caller must surface this loudly to the
+    /// user — refusal is the honest answer, not an error to swallow.
+    Refuse {
+        /// Why no schedule was produced.
+        reason: RefuseReason,
+    },
 }

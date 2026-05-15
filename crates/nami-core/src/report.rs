@@ -1,48 +1,83 @@
-//! End-of-run report.
+//! The end-of-run report.
 //!
-//! [`RunReport`] is the durable record of one `nami` invocation: what was
-//! scheduled, what actually happened, and whether any data was missing or
-//! degraded. Sinks ([`crate::Sink`]) consume reports.
+//! [`RunReport`] is the durable, auditable record of one `nami` invocation:
+//! the inputs, the scheduling decision, what data was used, the
+//! methodology version, the materiality threshold in effect, and what
+//! actually happened when (or if) the child process ran.
 
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 
 use crate::carbon::CarbonIntensity;
+use crate::confidence::{Confidence, DataFreshness};
 use crate::decision::SchedulingDecision;
+use crate::provider::ProviderInfo;
 use crate::region::Region;
 
-/// Aggregate carbon outcome for the run.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct CarbonOutcome {
-    /// Time-weighted mean intensity sampled during the run.
+/// A captured estimate of intensity over a specific window, used for both
+/// the "run now" baseline and the "selected window" outcome in a report.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WindowEstimate {
+    /// UTC start of the window.
+    pub start: OffsetDateTime,
+    /// Length of the window.
+    pub duration: Duration,
+    /// Duration-weighted mean intensity across the window.
     pub mean_intensity: CarbonIntensity,
-    /// Hypothetical mean intensity if the job had run immediately at submit
-    /// time. Used to compute deferral savings.
-    pub baseline_mean_intensity: Option<CarbonIntensity>,
+    /// Confidence in this window estimate.
+    pub confidence: Confidence,
 }
 
-/// A flag indicating that some piece of data was missing or degraded.
+/// The auditable record of one `nami` invocation.
 ///
-/// Per the "refuse to estimate" principle, every fallback is recorded so the
-/// user can see exactly where uncertainty entered the run.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "kind", content = "detail")]
-pub enum DataGap {
-    /// Forecast unavailable; scheduler used the fallback path.
-    ForecastUnavailable(String),
-    /// Real-time sampling failed at least once during the run.
-    SampleFailed(String),
-    /// Region was inferred rather than user-supplied.
-    RegionInferred(Region),
-}
-
-/// The record of one scheduled-and-executed (or refused) job.
+/// Every number that ends up in a report must be traceable: the
+/// methodology label says which version of the math produced it; the
+/// provider info says where the underlying data came from; the freshness
+/// field says whether the data was live, stale, or fallback.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunReport {
+    // -- Inputs --
+    /// The command path (`command[0]`).
+    pub command: String,
+    /// Arguments after the command path.
+    pub args: Vec<String>,
+    /// Grid region used.
+    pub region: Region,
+    /// User-supplied deadline for the job to finish.
+    pub deadline: OffsetDateTime,
+    /// User-supplied estimated duration of the job.
+    pub estimated_duration: Duration,
+
+    // -- Decision --
+    /// Full scheduling decision, including reason and confidence.
+    pub decision: SchedulingDecision,
+    /// Estimate of running immediately (the baseline).
+    pub run_now_estimate: Option<WindowEstimate>,
+    /// Estimate for the selected window, if a window was selected.
+    pub selected_window_estimate: Option<WindowEstimate>,
+    /// Estimated relative improvement vs. run-now, in percent
+    /// (`(run_now - selected) / run_now × 100`). `None` if no window
+    /// was selected.
+    pub estimated_improvement_pct: Option<f64>,
+    /// Materiality threshold (improvement percent) in effect for this
+    /// decision.
+    pub materiality_threshold_pct: f64,
+
+    // -- Provenance --
+    /// Provider that produced the underlying data.
+    pub provider: ProviderInfo,
+    /// Freshness state of the data used.
+    pub data_freshness: DataFreshness,
+    /// Methodology label tying the report to a specific version of the
+    /// derivation and forecasting code.
+    pub methodology_version: String,
+    /// Any warnings the scheduler or runner wants to surface to the user
+    /// (e.g., "static fallback used", "missing hours in cache").
+    pub warnings: Vec<String>,
+
+    // -- Execution outcome (None if the run did not occur) --
     /// UTC instant `nami` was invoked.
     pub submitted_at: OffsetDateTime,
-    /// The decision the scheduler returned.
-    pub decision: SchedulingDecision,
     /// When the child process actually started, if it did.
     pub started_at: Option<OffsetDateTime>,
     /// When the child process exited, if it did.
@@ -51,10 +86,4 @@ pub struct RunReport {
     pub wall_duration: Option<Duration>,
     /// The child's exit code, if it terminated normally.
     pub exit_code: Option<i32>,
-    /// The grid region used.
-    pub region: Region,
-    /// Carbon outcome, if intensity sampling succeeded.
-    pub carbon: Option<CarbonOutcome>,
-    /// Every gap or degraded-data event encountered.
-    pub data_gaps: Vec<DataGap>,
 }

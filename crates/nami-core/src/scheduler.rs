@@ -1,25 +1,24 @@
 //! The [`Scheduler`] trait.
 //!
 //! A scheduler converts a [`JobSpec`] plus a slice of [`ForecastPoint`]s
-//! into a [`SchedulingDecision`]. It is synchronous: by the time a scheduler
-//! is invoked, all necessary I/O has been done.
+//! into a [`SchedulingDecision`]. It is synchronous: all I/O happens
+//! upstream in the provider layer; by the time the scheduler runs, the
+//! decision is a pure function of its inputs.
 
-use crate::carbon::ForecastPoint;
+use time::OffsetDateTime;
+
 use crate::decision::SchedulingDecision;
 use crate::job::JobSpec;
-use time::OffsetDateTime;
+use crate::observation::ForecastPoint;
 
 /// A scheduling policy.
 ///
-/// Phase 0 ships `BestWindowScheduler` (in `nami-scheduler`), which picks the
-/// contiguous window with minimum mean forecast intensity that fits before
-/// the deadline. Additional policies (e.g., "as late as possible", "first
-/// window below threshold X") can be added later.
+/// `now` is passed explicitly rather than read from the clock so that
+/// scheduling is testable and deterministic. The materiality threshold
+/// and any other policy knobs belong to the scheduler implementation,
+/// not this trait.
 pub trait Scheduler: Send + Sync {
-    /// Decide when to run the job.
-    ///
-    /// `now` is passed explicitly rather than read from the clock so that
-    /// scheduling is testable and deterministic.
+    /// Decide when (or whether) to run the job.
     fn decide(
         &self,
         job: &JobSpec,

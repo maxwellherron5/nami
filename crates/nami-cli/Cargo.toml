@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 nami-core = { workspace = true }
-nami-carbon-watttime = { workspace = true }
+nami-carbon-eia = { workspace = true }
 nami-carbon-static = { workspace = true }
 nami-scheduler = { workspace = true }
 nami-region = { workspace = true }

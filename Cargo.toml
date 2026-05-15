@@ -2,7 +2,7 @@
 resolver = "3"
 members = [
     "crates/nami-core",
-    "crates/nami-carbon-watttime",
+    "crates/nami-carbon-eia",
     "crates/nami-carbon-static",
     "crates/nami-scheduler",
     "crates/nami-region",
@@ -19,7 +19,7 @@ repository = "https://github.com/maxwellherron/nami"
 [workspace.dependencies]
 # Internal crates
 nami-core = { path = "crates/nami-core" }
-nami-carbon-watttime = { path = "crates/nami-carbon-watttime" }
+nami-carbon-eia = { path = "crates/nami-carbon-eia" }
 nami-carbon-static = { path = "crates/nami-carbon-static" }
 nami-scheduler = { path = "crates/nami-scheduler" }
 nami-region = { path = "crates/nami-region" }

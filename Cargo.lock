@@ -575,11 +575,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "nami-carbon-static"
+name = "nami-carbon-eia"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "nami-core",
+ "reqwest",
+ "serde",
+ "serde_json",
  "thiserror",
  "time",
  "tokio",
@@ -587,16 +590,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "nami-carbon-watttime"
+name = "nami-carbon-static"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "nami-core",
- "reqwest",
- "serde",
  "thiserror",
  "time",
- "tokio",
  "tracing",
 ]
 
@@ -606,8 +605,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "nami-carbon-eia",
  "nami-carbon-static",
- "nami-carbon-watttime",
  "nami-core",
  "nami-region",
  "nami-scheduler",

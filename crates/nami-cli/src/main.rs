@@ -2,7 +2,8 @@
 //!
 //! Phase 0: argument parsing only. Each subcommand handler returns
 //! `unimplemented!()`; the parsing surface is the contract we want to lock
-//! down first.
+//! down first. Implementation lands in subsequent sessions per the order
+//! in `CLAUDE.md`'s "Phase 0 implementation goals".
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -11,7 +12,7 @@ use tracing_subscriber::EnvFilter;
 
 use nami_core::Region;
 
-/// Carbon-aware scheduler for ML training jobs.
+/// Conservative, uncertainty-aware, public-data carbon-aware scheduler.
 #[derive(Debug, Parser)]
 #[command(name = "nami", version, about, long_about = None)]
 struct Cli {
@@ -25,17 +26,20 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Schedule and run a command at the cleanest moment before `--deadline`.
+    /// Schedule and run a command in an estimated lower-carbon window
+    /// before `--deadline`.
     Run(RunArgs),
 
-    /// Show the schedule `run` would pick, without executing anything.
+    /// Compute a recommendation without executing anything.
     Preview(RunArgs),
 
-    /// Print the most recent run report.
-    Status(StatusArgs),
-
-    /// Print the raw forecast for a region over a horizon.
+    /// Print historical-pattern forecast points for a region and confidence
+    /// metadata.
     Forecast(ForecastArgs),
+
+    /// Print cache freshness, supported regions, provider availability,
+    /// and configured data sources.
+    Status(StatusArgs),
 }
 
 /// Args for `nami run` and `nami preview`.
@@ -43,23 +47,19 @@ enum Command {
 struct RunArgs {
     /// How long the job is expected to take, e.g. `2h`, `90m`, `45s`.
     #[arg(long, value_parser = parse_duration)]
-    estimated_duration: Duration,
+    duration: Duration,
 
     /// Latest UTC instant the job is allowed to *finish*, RFC 3339 format.
     #[arg(long, value_parser = parse_datetime)]
     deadline: time::OffsetDateTime,
 
-    /// Grid region (e.g. `ERCOT`, `CAISO_NORTH`). If omitted, region will be
-    /// inferred from IP geolocation.
+    /// Grid region (one of: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
+    /// If omitted, region detection will be attempted.
     #[arg(long)]
     region: Option<Region>,
 
-    /// Refuse to schedule if no live forecast is available, instead of
-    /// falling back to the static table or running immediately.
-    #[arg(long)]
-    strict: bool,
-
-    /// Path to write the JSON run report. If omitted, the report goes to stdout.
+    /// Path to write the JSON run report. If omitted, the report goes to
+    /// stdout at the end of the run.
     #[arg(long)]
     report: Option<std::path::PathBuf>,
 
@@ -71,9 +71,10 @@ struct RunArgs {
 /// Args for `nami status`.
 #[derive(Debug, clap::Args)]
 struct StatusArgs {
-    /// Path to a previously written run report.
+    /// Optional path to a previously written run report; if provided, also
+    /// summarize that report's decision and provenance.
     #[arg(long)]
-    report: std::path::PathBuf,
+    report: Option<std::path::PathBuf>,
 }
 
 /// Args for `nami forecast`.

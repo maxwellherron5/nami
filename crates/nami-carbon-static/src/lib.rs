@@ -1,7 +1,8 @@
-//! Offline [`CarbonProvider`](nami_core::CarbonProvider) backed by a static
-//! table of annual-average regional carbon intensities.
+//! Offline static-fallback "provider" for `nami`.
 //!
-//! See [`StaticTableProvider`] for details and design rationale.
+//! Provides one number per region: a coarse annual mean. See
+//! [`StaticTableProvider`] for the design rationale on why this is
+//! intentionally **not** a forecast or historical provider.
 
 #![deny(missing_docs)]
 #![deny(rust_2018_idioms)]

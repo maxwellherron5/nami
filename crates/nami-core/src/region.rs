@@ -1,9 +1,9 @@
-//! Grid regions in which a job may run.
+//! U.S. balancing-authority regions supported by `nami`.
 //!
 //! Regions are an explicit enum, not a free-form string: adding a new region
 //! is a deliberate code change so that we never silently route a job to a
-//! region we have no carbon data for. Phase 0 supports the US ISO/RTO
-//! balancing authorities that WattTime's free tier covers.
+//! region we have no carbon data for. Phase 0 supports the seven major
+//! U.S. ISO/RTO balancing authorities covered by EIA-930.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -11,16 +11,15 @@ use std::str::FromStr;
 
 use crate::error::{Error, Result};
 
-/// A grid region.
+/// A U.S. balancing-authority grid region.
 ///
-/// US regions use WattTime balancing-authority codes (`CAISO_NORTH`, `ERCOT`,
-/// etc.). Non-US coverage will arrive in Phase 1 and is intentionally absent
-/// here.
+/// Codes correspond to EIA-930 BA identifiers. Non-U.S. regions are out of
+/// scope until Phase 1 adds ENTSO-E or the UK Carbon Intensity API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Region {
-    /// California ISO, northern subregion.
-    CaisoNorth,
+    /// California ISO.
+    Caiso,
     /// Electric Reliability Council of Texas.
     Ercot,
     /// Midcontinent ISO.
@@ -36,10 +35,10 @@ pub enum Region {
 }
 
 impl Region {
-    /// The canonical WattTime BA code for this region.
+    /// The canonical EIA-930 BA code for this region.
     pub const fn as_code(self) -> &'static str {
         match self {
-            Region::CaisoNorth => "CAISO_NORTH",
+            Region::Caiso => "CAISO",
             Region::Ercot => "ERCOT",
             Region::Miso => "MISO",
             Region::Pjm => "PJM",
@@ -49,9 +48,9 @@ impl Region {
         }
     }
 
-    /// All regions known to this build.
+    /// All regions supported by this build.
     pub const ALL: &'static [Region] = &[
-        Region::CaisoNorth,
+        Region::Caiso,
         Region::Ercot,
         Region::Miso,
         Region::Pjm,
@@ -72,7 +71,7 @@ impl FromStr for Region {
 
     fn from_str(s: &str) -> Result<Self> {
         match s.to_ascii_uppercase().as_str() {
-            "CAISO_NORTH" | "CAISO-NORTH" => Ok(Region::CaisoNorth),
+            "CAISO" => Ok(Region::Caiso),
             "ERCOT" => Ok(Region::Ercot),
             "MISO" => Ok(Region::Miso),
             "PJM" => Ok(Region::Pjm),

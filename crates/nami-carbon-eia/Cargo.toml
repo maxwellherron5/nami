@@ -1,15 +1,20 @@
 [package]
-name = "nami-carbon-watttime"
+name = "nami-carbon-eia"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "WattTime CarbonProvider implementation for nami."
+description = "EIA-930 + EPA eGRID public-data carbon provider for nami."
+
+[features]
+# Gates live EIA API tests. Off by default; requires EIA_API_KEY in env.
+live-eia = []
 
 [dependencies]
 nami-core = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

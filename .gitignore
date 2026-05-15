@@ -14,6 +14,9 @@ Cargo.lock.bak
 .env.*
 !.env.example
 
+# Runtime-populated historical cache (eGRID factor table is committed).
+data/historical-cache.json
+
 # Local agent configs
 .claude
 CLAUDE.md
