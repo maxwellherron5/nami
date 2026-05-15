@@ -1,0 +1,18 @@
+[package]
+name = "nami-carbon-watttime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "WattTime CarbonProvider implementation for nami."
+
+[dependencies]
+nami-core = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+time = { workspace = true }
+async-trait = "0.1"

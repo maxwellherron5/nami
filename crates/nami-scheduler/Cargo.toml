@@ -1,0 +1,14 @@
+[package]
+name = "nami-scheduler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Scheduling algorithms for nami; chooses the cleanest contiguous window before a deadline."
+
+[dependencies]
+nami-core = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+time = { workspace = true }

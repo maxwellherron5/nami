@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/nami-core",
+    "crates/nami-carbon-watttime",
+    "crates/nami-carbon-static",
+    "crates/nami-scheduler",
+    "crates/nami-region",
+    "crates/nami-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/maxwellherron/nami"
+
+[workspace.dependencies]
+# Internal crates
+nami-core = { path = "crates/nami-core" }
+nami-carbon-watttime = { path = "crates/nami-carbon-watttime" }
+nami-carbon-static = { path = "crates/nami-carbon-static" }
+nami-scheduler = { path = "crates/nami-scheduler" }
+nami-region = { path = "crates/nami-region" }
+
+# External crates
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "signal", "time", "fs", "io-util"] }
+clap = { version = "4", features = ["derive"] }
+time = { version = "0.3", features = ["serde", "serde-well-known", "macros", "formatting", "parsing"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

@@ -1,0 +1,25 @@
+[package]
+name = "nami-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The `nami` command-line interface."
+
+[[bin]]
+name = "nami"
+path = "src/main.rs"
+
+[dependencies]
+nami-core = { workspace = true }
+nami-carbon-watttime = { workspace = true }
+nami-carbon-static = { workspace = true }
+nami-scheduler = { workspace = true }
+nami-region = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+time = { workspace = true }

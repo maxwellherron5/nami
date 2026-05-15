@@ -1,0 +1,16 @@
+[package]
+name = "nami-region"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "IP-based region detection for nami."
+
+[dependencies]
+nami-core = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }

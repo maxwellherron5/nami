@@ -1,0 +1,18 @@
+[package]
+name = "nami-carbon-static"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Offline static-table CarbonProvider fallback for nami."
+
+[dependencies]
+nami-core = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+time = { workspace = true }
+async-trait = "0.1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

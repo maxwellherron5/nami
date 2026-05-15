@@ -1,0 +1,19 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# IDE / editor noise
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Local credentials / env
+.env
+.env.*
+!.env.example
+
+# Local agent configs
+.claude
+CLAUDE.md
