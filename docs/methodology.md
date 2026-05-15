@@ -84,6 +84,29 @@ This is **not** a direct EIA forecast. EIA-930 publishes a day-ahead
 mix forecast. Any forward-looking number `nami` produces is its own
 model layered on observed history.
 
+## Candidate window generation
+
+Before any window can be scored, the scheduler enumerates the *candidate*
+start times. Implemented in `nami-scheduler::candidate_windows`. The
+Phase 0 rules:
+
+- **Hour-aligned starts.** Candidate starts are snapped to UTC hour
+  boundaries. EIA-930 is hourly; offering sub-hour start precision would
+  imply resolution the data cannot support. The first candidate is the
+  earliest whole hour `>= now` (i.e. `now` itself only when `now` is
+  exactly on an hour boundary).
+- **Deadline is inclusive.** A candidate is kept iff
+  `start + D <= deadline`. `JobSpec` defines the deadline as the latest
+  moment the job may *finish*, so finishing exactly at the deadline is
+  permitted.
+- **"Run now" is not in this set.** Running immediately (`start == now`,
+  possibly mid-hour) is a separate baseline the scheduler always
+  evaluates; it is intentionally excluded from the deferred candidate
+  enumeration so the two are never conflated in a report.
+- **Empty is not an error.** Zero candidates (job too long for the
+  remaining time, non-positive duration, deadline already passed) is a
+  normal outcome; the scheduler decides what it means (run now / refuse).
+
 ## Candidate window scoring
 
 For a job of estimated duration `D` and candidate start time `s`:

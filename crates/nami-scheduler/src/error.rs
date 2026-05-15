@@ -13,6 +13,12 @@ pub enum Error {
     /// invariants (e.g., unsorted timestamps when sorting was required).
     #[error("malformed forecast: {0}")]
     MalformedForecast(String),
+
+    /// A time computation overflowed the representable range. In practice
+    /// this only happens with absurd deadlines far outside any realistic
+    /// scheduling horizon; surfaced rather than panicked.
+    #[error("time value out of representable range: {0}")]
+    TimeOutOfRange(String),
 }
 
 /// Result alias for the scheduler.
