@@ -32,6 +32,7 @@
 mod carbon;
 mod confidence;
 mod decision;
+mod duration_secs;
 mod error;
 mod job;
 mod observation;

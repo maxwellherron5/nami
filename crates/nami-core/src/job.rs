@@ -20,11 +20,13 @@ pub struct JobSpec {
 
     /// The user's estimate of how long the job runs. Used to size the
     /// scheduling window.
+    #[serde(with = "crate::duration_secs")]
     pub estimated_duration: Duration,
 
-    /// The latest moment the job is permitted to *finish*. If the cleanest
+    /// The latest moment the job is permitted to *finish*. If the best
     /// window plus `estimated_duration` ends after this instant, the
     /// scheduler must shorten its search or refuse.
+    #[serde(with = "time::serde::rfc3339")]
     pub deadline: OffsetDateTime,
 
     /// The grid region in which the job will physically run.
@@ -95,5 +97,27 @@ mod tests {
     fn rejects_too_tight_deadline() {
         let now = datetime!(2030-01-01 11:00 UTC); // 1h left, need 2h
         assert!(spec().validate(now).is_err());
+    }
+
+    #[test]
+    fn serializes_human_auditable_time_and_duration() {
+        let json = serde_json::to_string(&spec()).unwrap();
+        // Deadline is an RFC 3339 string, not a numeric array.
+        assert!(
+            json.contains("\"deadline\":\"2030-01-01T12:00:00Z\""),
+            "deadline not RFC3339: {json}"
+        );
+        // Duration is whole integer seconds (2h = 7200), not [secs, nanos].
+        assert!(
+            json.contains("\"estimated_duration\":7200"),
+            "duration not integer seconds: {json}"
+        );
+    }
+
+    #[test]
+    fn round_trips_through_json() {
+        let s = spec();
+        let back: JobSpec = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        assert_eq!(s, back);
     }
 }

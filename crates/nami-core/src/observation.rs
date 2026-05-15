@@ -19,6 +19,7 @@ use crate::confidence::Confidence;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CarbonObservation {
     /// UTC instant marking the start of the hour this observation covers.
+    #[serde(with = "time::serde::rfc3339")]
     pub at: OffsetDateTime,
     /// Estimated average intensity for this hour in gCO₂/kWh.
     pub intensity: CarbonIntensity,
@@ -37,6 +38,7 @@ pub struct CarbonObservation {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForecastPoint {
     /// UTC instant marking the start of the hour this point covers.
+    #[serde(with = "time::serde::rfc3339")]
     pub at: OffsetDateTime,
     /// Modelled mean intensity for this hour.
     pub intensity: CarbonIntensity,
@@ -54,8 +56,10 @@ pub struct ForecastPoint {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ForecastHorizon {
     /// UTC instant the forecast window opens.
+    #[serde(with = "time::serde::rfc3339")]
     pub start: OffsetDateTime,
     /// Length of the forecast window.
+    #[serde(with = "crate::duration_secs")]
     pub duration: Duration,
 }
 

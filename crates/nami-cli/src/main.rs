@@ -12,6 +12,9 @@ use tracing_subscriber::EnvFilter;
 
 use nami_core::Region;
 
+mod preview;
+mod sink;
+
 /// Conservative, uncertainty-aware, public-data carbon-aware scheduler.
 #[derive(Debug, Parser)]
 #[command(name = "nami", version, about, long_about = None)]
@@ -47,25 +50,25 @@ enum Command {
 struct RunArgs {
     /// How long the job is expected to take, e.g. `2h`, `90m`, `45s`.
     #[arg(long, value_parser = parse_duration)]
-    duration: Duration,
+    pub(crate) duration: Duration,
 
     /// Latest UTC instant the job is allowed to *finish*, RFC 3339 format.
     #[arg(long, value_parser = parse_datetime)]
-    deadline: time::OffsetDateTime,
+    pub(crate) deadline: time::OffsetDateTime,
 
     /// Grid region (one of: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
     /// If omitted, region detection will be attempted.
     #[arg(long)]
-    region: Option<Region>,
+    pub(crate) region: Option<Region>,
 
     /// Path to write the JSON run report. If omitted, the report goes to
     /// stdout at the end of the run.
     #[arg(long)]
-    report: Option<std::path::PathBuf>,
+    pub(crate) report: Option<std::path::PathBuf>,
 
     /// The command to wrap. Everything after `--` is forwarded verbatim.
     #[arg(last = true, required = true)]
-    command: Vec<String>,
+    pub(crate) command: Vec<String>,
 }
 
 /// Args for `nami status`.
@@ -117,7 +120,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Command::Run(args) => run(args),
-        Command::Preview(args) => preview(args),
+        Command::Preview(args) => preview::run(args),
         Command::Status(args) => status(args),
         Command::Forecast(args) => forecast(args),
     }
@@ -135,11 +138,7 @@ fn init_tracing(verbose: u8) {
 }
 
 fn run(_args: RunArgs) -> Result<()> {
-    unimplemented!("nami run: scheduling + subprocess wrap lands in a later session")
-}
-
-fn preview(_args: RunArgs) -> Result<()> {
-    unimplemented!("nami preview: scheduling decision computation lands in a later session")
+    unimplemented!("nami run: subprocess wrapping lands in a later session (Phase 0 item 12)")
 }
 
 fn status(_args: StatusArgs) -> Result<()> {

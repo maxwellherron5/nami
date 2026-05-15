@@ -85,11 +85,13 @@ pub enum DataFreshness {
     /// Observed data is older than expected; report the lag.
     StaleObserved {
         /// How far behind real time the freshest sample is.
+        #[serde(with = "crate::duration_secs")]
         lag: Duration,
     },
     /// No live observations; only historical cache is available.
     HistoricalCacheOnly {
         /// UTC timestamp of the newest sample in the cache.
+        #[serde(with = "time::serde::rfc3339")]
         newest_sample_at: OffsetDateTime,
     },
     /// Even the historical cache is unavailable; only the static fallback

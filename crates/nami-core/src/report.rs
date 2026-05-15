@@ -19,8 +19,10 @@ use crate::region::Region;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WindowEstimate {
     /// UTC start of the window.
+    #[serde(with = "time::serde::rfc3339")]
     pub start: OffsetDateTime,
     /// Length of the window.
+    #[serde(with = "crate::duration_secs")]
     pub duration: Duration,
     /// Duration-weighted mean intensity across the window.
     pub mean_intensity: CarbonIntensity,
@@ -44,8 +46,10 @@ pub struct RunReport {
     /// Grid region used.
     pub region: Region,
     /// User-supplied deadline for the job to finish.
+    #[serde(with = "time::serde::rfc3339")]
     pub deadline: OffsetDateTime,
     /// User-supplied estimated duration of the job.
+    #[serde(with = "crate::duration_secs")]
     pub estimated_duration: Duration,
 
     // -- Decision --
@@ -77,12 +81,16 @@ pub struct RunReport {
 
     // -- Execution outcome (None if the run did not occur) --
     /// UTC instant `nami` was invoked.
+    #[serde(with = "time::serde::rfc3339")]
     pub submitted_at: OffsetDateTime,
     /// When the child process actually started, if it did.
+    #[serde(with = "time::serde::rfc3339::option")]
     pub started_at: Option<OffsetDateTime>,
     /// When the child process exited, if it did.
+    #[serde(with = "time::serde::rfc3339::option")]
     pub finished_at: Option<OffsetDateTime>,
     /// Wall-clock duration the child ran.
+    #[serde(with = "crate::duration_secs::option")]
     pub wall_duration: Option<Duration>,
     /// The child's exit code, if it terminated normally.
     pub exit_code: Option<i32>,

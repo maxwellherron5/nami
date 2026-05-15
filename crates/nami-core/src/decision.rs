@@ -58,6 +58,7 @@ pub enum SchedulingDecision {
     /// Defer the run to `start_time`.
     StartAt {
         /// UTC instant at which the wrapped command should be spawned.
+        #[serde(with = "time::serde::rfc3339")]
         start_time: OffsetDateTime,
         /// Why this start time was chosen.
         reason: StartReason,

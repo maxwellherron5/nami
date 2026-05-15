@@ -61,6 +61,7 @@ pub struct ProviderInfo {
     pub granularity: DataGranularity,
     /// Expected lag between real-world time and what the provider can
     /// answer for. `None` if the provider has no real-time dimension.
+    #[serde(with = "crate::duration_secs::option")]
     pub expected_lag: Option<Duration>,
 }
 
@@ -140,6 +141,7 @@ pub trait ForecastProvider: ProviderMetadata {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GridSnapshot {
     /// UTC instant the snapshot represents.
+    #[serde(with = "time::serde::rfc3339")]
     pub at: OffsetDateTime,
     /// Fuel-mix shares (each entry's value is MWh generated in the hour).
     pub generation_mwh: Vec<(FuelType, f64)>,
