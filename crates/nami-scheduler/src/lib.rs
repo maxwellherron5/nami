@@ -17,5 +17,5 @@ mod window;
 
 pub use error::{Error, Result};
 pub use fallback::static_fallback_decision;
-pub use materiality::DEFAULT_MATERIALITY_THRESHOLD_PCT;
+pub use materiality::{DEFAULT_MATERIALITY_THRESHOLD_PCT, MaterialityVerdict, assess_materiality};
 pub use window::{CandidateWindow, candidate_windows};

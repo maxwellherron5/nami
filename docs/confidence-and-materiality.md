@@ -30,20 +30,57 @@ pub struct Confidence {
 A reviewer reading a `RunReport` should be able to see *why* a particular
 confidence level was assigned, not just that it was.
 
-### Level assignment (planned)
+### Level assignment
 
-The forecast layer will assign levels roughly as follows (subject to
-empirical tuning as we collect data):
+Implemented in `nami_core::Confidence::assess`. Three axes are graded
+**independently**, and the **most conservative** (lowest) of the three is
+the assigned level. This replaces an earlier draft table whose mixed
+AND/OR wording was ambiguous; the worst-of-three rule is precise and
+fails safe (any one weak axis pulls the result down).
 
-| Level | Trigger |
+**Axis 1 — sample count** (number of matching historical observations;
+the forecast matches region/hour/day/month, so roughly one per week):
+
+| Samples | Level |
 |---|---|
-| `High` | Fresh observed data + ≥6 weeks of matching historical samples + interval width < ±10% of mean |
-| `Medium` | Stale-observed or 3–6 weeks of samples or interval width < ±25% of mean |
-| `Low` | Historical-cache-only or 1–3 weeks of samples or interval width up to ±40% |
-| `VeryLow` | Static fallback only, sparse samples, or interval width >±40% |
+| ≥ 6 | `High` |
+| 3–5 | `Medium` |
+| 1–2 | `Low` |
+| 0 | `VeryLow` |
 
-These bands are placeholders and will be revisited once real data is in
-the system.
+**Axis 2 — relative interval width** `r = std_dev / mean` (the 1σ
+half-width as a fraction of the mean):
+
+| `r` | Level |
+|---|---|
+| `r < 0.10` | `High` |
+| `0.10 ≤ r < 0.25` | `Medium` |
+| `0.25 ≤ r ≤ 0.40` | `Low` |
+| `r > 0.40` | `VeryLow` |
+
+Not computable — fewer than 2 samples, non-positive mean, or any
+non-finite input — grades `VeryLow` and yields no interval. (Consequence:
+a single sample is always `VeryLow`, because one sample gives no
+defensible variance estimate.)
+
+**Axis 3 — freshness cap** (see
+[`methodology.md`](methodology.md#data-freshness-states)):
+
+| Freshness | Cap |
+|---|---|
+| `FreshObserved` | `High` |
+| `StaleObserved` | `Medium` |
+| `HistoricalCacheOnly` | `Low` |
+| `StaticFallbackOnly` | `VeryLow` |
+| `NoUsableData` | `VeryLow` |
+
+The interval (when computable) is the 1σ band
+`[max(0, mean − std_dev), mean + std_dev]` in gCO₂/kWh. Every axis
+appends a note to the `Confidence` so a report reviewer can see exactly
+why the level was assigned.
+
+The numeric bands are still subject to empirical tuning once real data
+is in the system, but the **worst-of-three combination rule is fixed**.
 
 ## Materiality
 
