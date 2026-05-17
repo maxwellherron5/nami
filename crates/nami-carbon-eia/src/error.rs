@@ -26,9 +26,31 @@ pub enum Error {
     #[error("egrid factor table: {0}")]
     EgridTable(String),
 
-    /// The local historical cache file was missing, stale, or corrupt.
+    /// The historical cache file does not exist at the given path. This is
+    /// a *state*, not necessarily a fatal error: the caller typically maps
+    /// it to a static-fallback `DataFreshness`.
+    #[error("historical cache not found: {0}")]
+    CacheMissing(String),
+
+    /// The cache file exists but its `schema_version` is not one this
+    /// build understands. We refuse to interpret an unknown format rather
+    /// than silently misread it.
+    #[error("historical cache schema mismatch: found v{found}, expected v{expected}")]
+    CacheSchemaMismatch {
+        /// Schema version found in the file.
+        found: u32,
+        /// Schema version this build supports.
+        expected: u32,
+    },
+
+    /// The cache file exists and parsed, but failed structural validation
+    /// (e.g., observations not strictly time-ordered, duplicate region).
     #[error("historical cache: {0}")]
     HistoricalCache(String),
+
+    /// Filesystem I/O failure reading or writing a local file.
+    #[error("io: {0}")]
+    Io(#[from] std::io::Error),
 
     /// A value returned by EIA failed validation or violated invariants.
     #[error("eia returned malformed data: {0}")]
