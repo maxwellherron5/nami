@@ -21,7 +21,7 @@ use std::process::{ExitStatus, Stdio};
 use anyhow::{Context, Result, anyhow};
 use time::{Duration, OffsetDateTime};
 use tokio::process::Command;
-use tokio::signal::unix::{SignalKind, signal};
+use tokio::signal::unix::{Signal, SignalKind, signal};
 
 use nami_carbon_eia::DEFAULT_CACHE_PATH;
 use nami_core::{RunReport, SchedulingDecision, Sink};
@@ -45,6 +45,18 @@ pub async fn run(args: RunArgs) -> Result<()> {
     resolve_program(program, std::env::var("PATH").ok().as_deref())
         .with_context(|| format!("cannot schedule `{program}`"))?;
 
+    // Install the termination-signal handlers ONCE, up front — before the
+    // wait phase and before the child is spawned. tokio's Unix signal
+    // handlers are process-wide and persist for the lifetime of the
+    // `Signal`, so creating them here both makes the (possibly hours-long)
+    // wait robust to SIGTERM/SIGHUP and closes the race where a signal
+    // arriving between spawn and supervisor setup would hit the parent's
+    // default disposition (killing nami, and the child via kill_on_drop,
+    // with no grace period and no report).
+    let mut sigint = signal(SignalKind::interrupt())?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let mut sighup = signal(SignalKind::hangup())?;
+
     let now = OffsetDateTime::now_utc();
     let cache = load_cache(DEFAULT_CACHE_PATH, now);
     let mut report = assemble(&args, now, cache)?;
@@ -61,12 +73,13 @@ pub async fn run(args: RunArgs) -> Result<()> {
         SchedulingDecision::StartAt { start_time, .. } => *start_time,
     };
 
-    if !wait_until(start_time).await {
-        report.warnings.push(
-            "Schedule cancelled by SIGINT during the wait phase; the command was not started."
-                .to_string(),
-        );
-        eprintln!("\nnami: schedule cancelled (SIGINT during wait); command not started.");
+    if let Some(sig) = wait_until(start_time, &mut sigint, &mut sigterm, &mut sighup).await {
+        let name = sig_name(sig);
+        report.warnings.push(format!(
+            "Schedule cancelled by {name} during the wait phase; the command \
+             was not started."
+        ));
+        eprintln!("\nnami: schedule cancelled ({name} during wait); command not started.");
         finalize(&report, &args);
         std::process::exit(0);
     }
@@ -75,7 +88,7 @@ pub async fn run(args: RunArgs) -> Result<()> {
     let mut child = spawn_child(&args).context("failed to spawn the wrapped command")?;
     let pid = child.id().expect("child has a PID before it is awaited") as libc::pid_t;
 
-    let status = supervise(&mut child, pid).await?;
+    let status = supervise(&mut child, pid, &mut sigint, &mut sigterm, &mut sighup).await?;
 
     let finished_at = OffsetDateTime::now_utc();
     report.started_at = Some(started_at);
@@ -87,17 +100,37 @@ pub async fn run(args: RunArgs) -> Result<()> {
     std::process::exit(code);
 }
 
-/// Sleep until `start_time`, interruptible by SIGINT. Returns `true` if
-/// the wait completed normally, `false` if SIGINT cancelled it.
-async fn wait_until(start_time: OffsetDateTime) -> bool {
+/// Sleep until `start_time`, cancellable by any termination signal.
+/// Returns `None` if the wait completed normally, or `Some(signal)` if a
+/// SIGINT/SIGTERM/SIGHUP cancelled it (schedule abandoned, nothing
+/// spawned). The signal streams are owned by `run` so the handlers are
+/// already installed when this is called.
+async fn wait_until(
+    start_time: OffsetDateTime,
+    sigint: &mut Signal,
+    sigterm: &mut Signal,
+    sighup: &mut Signal,
+) -> Option<libc::c_int> {
     let remaining = start_time - OffsetDateTime::now_utc();
     if remaining <= Duration::ZERO {
-        return true;
+        return None;
     }
     let sleep = tokio::time::sleep(remaining.unsigned_abs());
     tokio::select! {
-        _ = sleep => true,
-        _ = tokio::signal::ctrl_c() => false,
+        _ = sleep => None,
+        _ = sigint.recv() => Some(libc::SIGINT),
+        _ = sigterm.recv() => Some(libc::SIGTERM),
+        _ = sighup.recv() => Some(libc::SIGHUP),
+    }
+}
+
+/// Human name for a forwarded/cancelling signal, for messages.
+fn sig_name(sig: libc::c_int) -> &'static str {
+    match sig {
+        libc::SIGINT => "SIGINT",
+        libc::SIGTERM => "SIGTERM",
+        libc::SIGHUP => "SIGHUP",
+        _ => "signal",
     }
 }
 
@@ -130,10 +163,13 @@ fn spawn_child(args: &RunArgs) -> Result<tokio::process::Child> {
 /// Wait for the child while forwarding terminating signals to it. After
 /// the first forwarded signal the child has [`GRACE_PERIOD`] to exit
 /// before `nami` escalates to SIGKILL.
-async fn supervise(child: &mut tokio::process::Child, pid: libc::pid_t) -> Result<ExitStatus> {
-    let mut sigint = signal(SignalKind::interrupt())?;
-    let mut sigterm = signal(SignalKind::terminate())?;
-    let mut sighup = signal(SignalKind::hangup())?;
+async fn supervise(
+    child: &mut tokio::process::Child,
+    pid: libc::pid_t,
+    sigint: &mut Signal,
+    sigterm: &mut Signal,
+    sighup: &mut Signal,
+) -> Result<ExitStatus> {
     let mut force_kill_at: Option<tokio::time::Instant> = None;
 
     loop {

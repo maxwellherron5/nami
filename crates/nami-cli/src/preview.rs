@@ -40,8 +40,11 @@ const STATIC_METHODOLOGY: &str = "static-fallback-annual-v1";
 
 /// Outcome of attempting to load the historical cache.
 pub(crate) enum CacheState {
-    /// Loaded; `bool` is whether it is stale (older than the max age).
-    Present(Box<HistoricalCache>, bool),
+    /// Loaded. Staleness is judged per-region by the caller from the
+    /// queried region's newest sample (not a file-level flag): a
+    /// per-region `refresh` rewrites the whole file's `generated_at`, so
+    /// a file-level age would under-report a stale untouched region.
+    Present(Box<HistoricalCache>),
     /// No cache file present (a normal state, not an error).
     Missing,
     /// Cache file present but unusable; carries the reason.
@@ -66,11 +69,9 @@ pub fn run(args: RunArgs) -> Result<()> {
 }
 
 pub(crate) fn load_cache(path: &str, now: OffsetDateTime) -> CacheState {
+    let _ = now; // staleness is now decided per-region in `assemble`
     match HistoricalCache::load(path) {
-        Ok(c) => {
-            let stale = c.is_stale(now, DEFAULT_MAX_CACHE_AGE);
-            CacheState::Present(Box::new(c), stale)
-        }
+        Ok(c) => CacheState::Present(Box::new(c)),
         Err(nami_carbon_eia::Error::CacheMissing(_)) => CacheState::Missing,
         Err(e) => CacheState::Unusable(e.to_string()),
     }
@@ -126,11 +127,15 @@ pub(crate) fn assemble(
                 )),
                 None,
             ),
-            CacheState::Present(c, _) => (None, Some(c.as_ref())),
+            CacheState::Present(c) => (None, Some(c.as_ref())),
         };
 
     if let Some(c) = cache_for_forecast {
-        let stale = matches!(&cache, CacheState::Present(_, true));
+        // Per-region freshness: the age of the newest sample we actually
+        // have for this region — not the file-level `generated_at`, which
+        // a single-region `refresh` rewrites for the whole file.
+        let newest = c.newest_sample(region).unwrap_or(now);
+        let stale = now - newest > DEFAULT_MAX_CACHE_AGE;
         let horizon = ForecastHorizon::new(now, job.deadline - now);
         let forecast = historical_pattern_forecast(c, region, horizon, now, DEFAULT_FORECAST_WEEKS);
 
@@ -190,8 +195,9 @@ pub(crate) fn assemble(
         let mut warnings = base_warnings();
         if stale {
             warnings.push(format!(
-                "STALE DATA: the historical cache is older than {} hours; this \
-                 recommendation is based on out-of-date patterns.",
+                "STALE DATA: the newest cached sample for {region} is older \
+                 than {} hours; this recommendation is based on out-of-date \
+                 patterns.",
                 DEFAULT_MAX_CACHE_AGE.whole_hours()
             ));
         }
@@ -201,7 +207,6 @@ pub(crate) fn assemble(
             warnings.extend(confidence.notes.iter().cloned());
         }
 
-        let newest = c.newest_sample(region).unwrap_or(now);
         return Ok(RunReport {
             command: command.clone(),
             args: cmd_args.to_vec(),
@@ -479,7 +484,7 @@ mod tests {
         let now = datetime!(2026-05-20 06:00 UTC);
         let c = HistoricalCache::new(now, "test"); // empty: no region history
         let a = args_for(Some(Region::Caiso), datetime!(2026-05-20 18:00 UTC), 1);
-        let r = assemble(&a, now, CacheState::Present(Box::new(c), false)).unwrap();
+        let r = assemble(&a, now, CacheState::Present(Box::new(c))).unwrap();
         assert_eq!(r.data_freshness, DataFreshness::StaticFallbackOnly);
         assert!(r.warnings.iter().any(|w| w.contains("no matching samples")));
     }
@@ -498,7 +503,7 @@ mod tests {
             }],
         );
         let a = args_for(Some(Region::Caiso), datetime!(2026-05-20 15:00 UTC), 1);
-        let r = assemble(&a, now, CacheState::Present(Box::new(c), false)).unwrap();
+        let r = assemble(&a, now, CacheState::Present(Box::new(c))).unwrap();
 
         assert!(matches!(
             r.data_freshness,
@@ -525,6 +530,47 @@ mod tests {
         ));
         let rn = r.run_now_estimate.expect("run-now estimate present");
         assert!((rn.mean_intensity.value() - 350.0).abs() < 1e-9);
+    }
+
+    /// Staleness is judged from the queried region's newest sample, not
+    /// the file-level `generated_at` (which a per-region `refresh`
+    /// rewrites for the whole file). A region whose newest sample is old
+    /// must still be flagged STALE even when the cache file is "fresh".
+    #[test]
+    fn per_region_staleness_uses_newest_sample_not_file_timestamp() {
+        let now = datetime!(2026-05-20 10:00 UTC);
+        let obs = |at| CarbonObservation {
+            at,
+            intensity: CarbonIntensity::new(350.0).unwrap(),
+            methodology: "eia-930-v1+egrid-2023-ba".into(),
+        };
+        let a = args_for(Some(Region::Caiso), datetime!(2026-05-20 15:00 UTC), 1);
+
+        // Stale: newest CAISO sample is 7 days old, but the file itself
+        // was just written (generated_at = now).
+        let mut stale = HistoricalCache::new(now, "test");
+        stale.set_region(Region::Caiso, vec![obs(datetime!(2026-05-13 10:00 UTC))]);
+        let r = assemble(&a, now, CacheState::Present(Box::new(stale))).unwrap();
+        assert!(
+            r.warnings.iter().any(|w| w.contains("STALE DATA")),
+            "old newest sample must be flagged STALE despite a fresh file"
+        );
+
+        // Fresh: a recent sample (1h old) ⇒ no STALE warning, plus a
+        // prior-week same-hour sample so the run-now hour is forecast.
+        let mut fresh = HistoricalCache::new(now, "test");
+        fresh.set_region(
+            Region::Caiso,
+            vec![
+                obs(datetime!(2026-05-13 10:00 UTC)),
+                obs(datetime!(2026-05-20 09:00 UTC)),
+            ],
+        );
+        let r = assemble(&a, now, CacheState::Present(Box::new(fresh))).unwrap();
+        assert!(
+            !r.warnings.iter().any(|w| w.contains("STALE DATA")),
+            "a recent newest sample must not be flagged STALE"
+        );
     }
 
     #[test]

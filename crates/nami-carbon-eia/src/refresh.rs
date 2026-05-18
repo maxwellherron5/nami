@@ -152,6 +152,7 @@ pub async fn fetch_region_json(
     let respondent = respondent_code(region);
     let mut rows: Vec<serde_json::Value> = Vec::new();
     let mut offset = 0usize;
+    let mut completed = false;
 
     for _ in 0..MAX_PAGES {
         let query = build_query(respondent, start, end, offset, PAGE_LEN, api_key);
@@ -173,12 +174,26 @@ pub async fn fetch_region_json(
         rows.extend(page.response.data);
         offset += got;
 
-        let done = got == 0
-            || got < PAGE_LEN
-            || parse_total(&page.response.total).is_some_and(|t| offset >= t);
-        if done {
+        // Terminate only on a definitive signal: an empty page, or a
+        // known `total` we have reached. A short page is NOT treated as
+        // terminal on its own — EIA can return fewer than `length` rows
+        // on a non-final page, and when `total` is absent that would
+        // silently truncate history. When `total` is unknown we page
+        // until an empty response (MAX_PAGES still bounds the loop).
+        if got == 0 || parse_total(&page.response.total).is_some_and(|t| offset >= t) {
+            completed = true;
             break;
         }
+    }
+
+    if !completed {
+        // Hit MAX_PAGES without a definitive end: refuse rather than
+        // proceed on possibly-truncated history (CLAUDE.md: do not
+        // silently estimate on incomplete data).
+        return Err(Error::Malformed(format!(
+            "EIA pagination exceeded {MAX_PAGES} pages without reaching the \
+             reported total; refusing to proceed on possibly-truncated data"
+        )));
     }
 
     let combined = serde_json::json!({ "response": { "data": rows } });
