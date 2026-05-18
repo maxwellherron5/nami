@@ -58,7 +58,7 @@ pub fn run(args: RunArgs) -> Result<()> {
     let cache = load_cache(DEFAULT_CACHE_PATH, now);
     let report = assemble(&args, now, cache)?;
 
-    print!("{}", human_summary(&report));
+    print!("{}", human_summary(&report, "preview"));
 
     if let Some(path) = &args.report {
         JsonFileSink(path.clone())
@@ -347,10 +347,14 @@ fn refuse_text(r: &RefuseReason) -> String {
 }
 
 /// Build the careful, language-rule-compliant terminal summary.
-pub(crate) fn human_summary(r: &RunReport) -> String {
+///
+/// `subcommand` is the invoking command name (`"preview"` / `"run"`) so
+/// the header reflects how it was actually invoked — `nami run` reuses
+/// this exact summary and must not mislabel itself as `preview`.
+pub(crate) fn human_summary(r: &RunReport, subcommand: &str) -> String {
     let mut s = String::new();
     s.push_str(&format!(
-        "nami preview — region {} — deadline {}\n",
+        "nami {subcommand} — region {} — deadline {}\n",
         r.region,
         fmt_dt(r.deadline)
     ));
@@ -578,7 +582,11 @@ mod tests {
         let now = datetime!(2026-05-20 06:00 UTC);
         let a = args_for(Some(Region::Caiso), datetime!(2026-05-20 18:00 UTC), 2);
         let r = assemble(&a, now, CacheState::Missing).unwrap();
-        let text = human_summary(&r).to_lowercase();
+        // The header reflects the invoking subcommand (run must not
+        // mislabel itself as preview).
+        assert!(human_summary(&r, "preview").starts_with("nami preview — region CAISO"));
+        assert!(human_summary(&r, "run").starts_with("nami run — region CAISO"));
+        let text = human_summary(&r, "preview").to_lowercase();
         assert!(text.contains("run immediately"));
         assert!(text.contains("not marginal emissions"));
         // On the static fallback path the basis line must not claim a

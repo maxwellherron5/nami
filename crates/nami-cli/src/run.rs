@@ -61,7 +61,7 @@ pub async fn run(args: RunArgs) -> Result<()> {
     let cache = load_cache(DEFAULT_CACHE_PATH, now);
     let mut report = assemble(&args, now, cache)?;
 
-    print!("{}", human_summary(&report));
+    print!("{}", human_summary(&report, "run"));
     flush_stdout();
 
     let start_time = match &report.decision {
