@@ -206,9 +206,9 @@ A lower-carbon recommendation is offered only if:
 (run_now_intensity - selected_window_intensity) / run_now_intensity ≥ T
 ```
 
-with default `T = 0.05` (5%). Below the threshold, the scheduler returns
-`StartImmediately` or `Refuse(CandidateWindowsBelowMaterialityThreshold)`
-depending on context, and reports surface the reason plainly.
+with default `T = 0.05` (5%). Below the threshold the scheduler returns
+`StartImmediately`/`RunNowAlreadyCleanest` (see the decision mapping
+below); reports surface the reason plainly.
 
 The threshold is intentionally conservative because:
 
@@ -218,6 +218,35 @@ The threshold is intentionally conservative because:
   differences are within forecast noise.
 - Users are better served by an honest "no meaningfully cleaner window"
   than by a confident-looking recommendation that's within noise.
+
+## Scheduler decision mapping (item 10 — implemented)
+
+`BestWindowScheduler` (`nami-scheduler`) combines candidate-window
+generation, forecast-window scoring, and the materiality assessment:
+
+1. Run-now `[now, now+D)` cannot finish before the deadline ⇒
+   `Refuse(NoWindowBeforeDeadline)`.
+2. Empty forecast ⇒ `Refuse(ForecastTooUncertain)`.
+3. **Run-now window not covered by the forecast ⇒
+   `Refuse(ForecastTooUncertain)`.** Materiality is defined as
+   improvement *over run-now*; with no baseline we will not assert an
+   unverifiable improvement (refuse-to-estimate).
+4. A candidate window is **unscorable** if *any* hourly bucket it
+   overlaps is missing from the forecast — never scored on partial data.
+5. No hour-aligned deferred window fits (but run-now does) ⇒
+   `StartImmediately(DeadlineTooSoon)`.
+6. Candidates existed but none were scorable ⇒
+   `StartImmediately(RunNowAlreadyCleanest)` with a note (we have a
+   run-now estimate; running now is the honest, safe answer).
+7. Otherwise `assess_materiality(run_now, scorable_candidates, T)`:
+   - materially cleaner ⇒ `StartAt(LowestEstimatedIntensity)`;
+   - **sub-threshold ⇒ `StartImmediately(RunNowAlreadyCleanest)`** — the
+     job still must run and the difference is within forecast noise.
+
+Window scoring is the duration-weighted mean of forecast intensity over
+the hourly buckets `[start, start+D)` overlaps. Decision `Confidence` is
+the **most conservative** level across those buckets with their sample
+counts summed (same worst-of philosophy as `Confidence::assess`).
 
 ## Data freshness states
 

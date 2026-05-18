@@ -40,8 +40,8 @@ impl CandidateWindow {
 }
 
 /// The UTC hour boundary at or before `t` (minutes, seconds, and
-/// sub-seconds zeroed).
-fn floor_to_hour(t: OffsetDateTime) -> Result<OffsetDateTime> {
+/// sub-seconds zeroed). Shared with the scheduler.
+pub(crate) fn floor_to_hour(t: OffsetDateTime) -> Result<OffsetDateTime> {
     let secs_into_hour = t.unix_timestamp().rem_euclid(3600);
     let drop = Duration::seconds(secs_into_hour) + Duration::nanoseconds(i64::from(t.nanosecond()));
     t.checked_sub(drop)
