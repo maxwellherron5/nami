@@ -64,14 +64,42 @@ Concretely, `nami`:
 - Falls back loudly, never silently. A static-fallback decision is
   marked as such in the report; a stale-cache decision is too.
 
+## CLI
+
+```sh
+# Schedule + run a command in an estimated lower-carbon hour before the deadline
+nami run --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
+
+# Same decision, but only print it — do not run anything
+nami preview --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
+
+# Refresh one region's slice of the local historical cache from EIA-930
+EIA_API_KEY=… nami refresh --region MISO          # --weeks N (default 8)
+```
+
+- `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
+  `--duration` (`30s`/`45m`/`2h`/`1d`), `--report <path>` (JSON
+  `RunReport`; printed to stdout if omitted). `run` additionally takes
+  `--quiet` (silence the wrapped command) or `--log <file>` (redirect its
+  output); it forwards SIGINT/SIGTERM/SIGHUP to the child, escalates to
+  SIGKILL after a grace period, and propagates the child's exit code.
+- `refresh` needs `EIA_API_KEY` (free registration; a missing key is a
+  hard error, never a silent fallback). It updates only the requested
+  region and preserves the rest of the cache.
+- Region detection is not implemented; `--region` is required (one of
+  CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
+- The `forecast` and `status` subcommands are **not yet implemented**
+  (their handlers currently panic); they are placeholders for later work.
+
 ## Status
 
-Phase 0, skeleton. Workspace, core types, capability-declaring provider
-traits, and a static-fallback baseline-only provider compile and have
-tests. The EIA-930 client, eGRID factor table, carbon-intensity derivation,
-historical-pattern forecast model, scheduler logic, and subprocess wrapper
-all land in subsequent sessions per the order in `CLAUDE.md`'s
-"Phase 0 implementation goals".
+Phase 0 implementation is complete: EIA-930 fetch + paginated cache
+refresh, the eGRID factor table, carbon-intensity derivation, the
+historical-pattern forecast, scheduler decision logic, `preview`, and
+`run` (subprocess wrapping with signal forwarding and exit-code
+propagation) are all implemented and tested, with live-API tests gated
+behind the `live-eia` feature. The `forecast` and `status` CLI handlers
+remain stubs and are out of the Phase 0 implementation scope.
 
 See:
 
@@ -79,6 +107,7 @@ See:
 - `docs/methodology.md` — the math, with caveats
 - `docs/public-data-sources.md` — what we use and what we don't
 - `docs/confidence-and-materiality.md` — uncertainty model
+- `docs/eia-api-notes.md` — EIA-930 API shape, fetch, and refresh notes
 - `CLAUDE.md` — operational instructions for contributors
 
 ## License

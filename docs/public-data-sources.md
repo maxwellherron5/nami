@@ -36,15 +36,24 @@ convenient it might be.
 
 ### EPA eGRID
 
-- **What:** static emission factors per fuel type at multiple geographic
-  granularities (national, subregion, state, plant).
+- **What:** static emission factors per fuel type, published at multiple
+  geographic granularities (national, subregion, state, plant, and
+  **balancing authority**).
 - **Why:** publicly maintained, methodologically transparent, widely
   cited reference.
-- **Granularity:** subregion is the right level for `nami`.
+- **Granularity:** `nami` uses the **balancing-authority** level (eGRID's
+  `BA` sheet). `nami`'s `Region` *is* a balancing authority, so the
+  mapping is 1:1 — there is **no** BA→subregion geographic
+  approximation. See `docs/methodology.md` for the per-fuel column
+  mapping.
 - **Limitations:** annual averages, not real-time; refreshed every
-  12–18 months; geographic mapping to BAs is approximate.
+  12–18 months; `NUC/WAT/SUN/WND` treated as zero-CO₂ and `OTH/UNK`
+  approximated by eGRID's non-baseload composite (documented assumption,
+  not a measured per-hour value).
 - **Storage:** committed `data/egrid-factors.toml`, version-pinned to a
-  specific eGRID release.
+  specific eGRID release (currently eGRID2023 rev2, sheet `BA23`),
+  produced offline by the gated `refresh-egrid` maintainer tool — the
+  shipped binary reads only the committed TOML.
 
 ## Phase 1 candidates
 

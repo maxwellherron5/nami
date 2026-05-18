@@ -1,9 +1,9 @@
 //! The `nami` command-line entry point.
 //!
-//! Phase 0: argument parsing only. Each subcommand handler returns
-//! `unimplemented!()`; the parsing surface is the contract we want to lock
-//! down first. Implementation lands in subsequent sessions per the order
-//! in `CLAUDE.md`'s "Phase 0 implementation goals".
+//! Phase 0 status: `run` (subprocess wrapping with signal forwarding and
+//! exit-code propagation), `preview`, and `refresh` are implemented;
+//! `forecast` and `status` are still stubs (their handlers panic) and are
+//! outside the Phase 0 implementation scope in `CLAUDE.md`.
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
