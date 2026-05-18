@@ -96,3 +96,33 @@ list. Decisions (see also `docs/methodology.md`):
   note is recorded on the `FuelMixHour`.
 - Negative values for non-storage fuels are kept as-is; how the
   derivation (item 8) treats them is a separate, documented decision.
+
+## Fetching & cache refresh (item 13)
+
+`nami refresh --region <R> [--weeks N] [--cache PATH] [--egrid PATH]`
+fetches **one** region's recent history and merges it into the local
+historical cache; other regions in the cache are preserved. `--weeks`
+defaults to `DEFAULT_FORECAST_WEEKS` (8). `EIA_API_KEY` is required (a
+missing key is a hard error, not a silent fallback).
+
+- **Pagination.** EIA v2 caps a response at 5000 rows. `nami` pages with
+  `offset`/`length`, accumulating raw `response.data` rows *before*
+  parsing, then runs `parse_fuel_type_data` once over the combined
+  document. Concatenating before parsing matters: a page boundary can
+  fall mid-hour, and parsing pages independently would split one
+  region-hour into two partial mixes (and two same-timestamp
+  observations, which the cache's strict validation rejects). Stops on a
+  short/empty page or when `offset >= total`; a `MAX_PAGES` cap prevents
+  an infinite loop on a bad `total`.
+- **`total`** is a JSON string in this API version (a number is also
+  accepted defensively).
+- **Window.** `[now − N weeks, now]`, both truncated to the top of the
+  UTC hour.
+- **Gaps.** An hour with no positive generation (`DerivationFailed`) is
+  counted and **skipped**, never written as a fabricated zero. An
+  unexpected respondent/region in the response is a hard error
+  (`Malformed`) — the request facet should make it impossible.
+- **Cache safety.** A missing cache is created; an existing-but-unusable
+  cache is **refused**, not overwritten.
+- The `request` echo (which contains the API key) is never parsed or
+  persisted — only `response` is read; error bodies are truncated.

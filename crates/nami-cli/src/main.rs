@@ -44,6 +44,10 @@ enum Command {
     /// Print cache freshness, supported regions, provider availability,
     /// and configured data sources.
     Status(StatusArgs),
+
+    /// Refresh one region's slice of the local historical cache from
+    /// EIA-930 (requires `EIA_API_KEY`). Other regions are preserved.
+    Refresh(RefreshArgs),
 }
 
 /// Args for `nami run` and `nami preview`.
@@ -103,6 +107,26 @@ struct ForecastArgs {
     horizon: Duration,
 }
 
+/// Args for `nami refresh`.
+#[derive(Debug, clap::Args)]
+struct RefreshArgs {
+    /// Grid region whose cache slice to refresh from EIA-930.
+    #[arg(long)]
+    region: Region,
+
+    /// Weeks of hourly history to fetch (ending now, UTC).
+    #[arg(long, default_value_t = nami_carbon_eia::DEFAULT_FORECAST_WEEKS)]
+    weeks: u32,
+
+    /// Historical cache file to update.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_CACHE_PATH)]
+    cache: std::path::PathBuf,
+
+    /// eGRID factor table to derive intensity with.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_EGRID_PATH)]
+    egrid: std::path::PathBuf,
+}
+
 fn parse_duration(s: &str) -> Result<Duration, String> {
     let (num_str, unit) = s
         .strip_suffix(|c: char| c.is_ascii_alphabetic())
@@ -134,6 +158,7 @@ fn main() -> Result<()> {
         Command::Preview(args) => preview::run(args),
         Command::Status(args) => status(args),
         Command::Forecast(args) => forecast(args),
+        Command::Refresh(args) => refresh(args),
     }
 }
 
@@ -163,6 +188,44 @@ fn status(_args: StatusArgs) -> Result<()> {
 
 fn forecast(_args: ForecastArgs) -> Result<()> {
     unimplemented!("nami forecast: provider integration lands in a later session")
+}
+
+fn refresh(args: RefreshArgs) -> Result<()> {
+    // Networked: needs an async runtime, like `run`.
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    let now = time::OffsetDateTime::now_utc();
+    let summary = rt.block_on(nami_carbon_eia::refresh_region_cache(
+        args.region,
+        args.weeks,
+        &args.cache,
+        &args.egrid,
+        now,
+    ))?;
+
+    println!(
+        "nami refresh — region {} — window {} .. {} UTC",
+        summary.region,
+        fmt_hour(summary.start),
+        fmt_hour(summary.end),
+    );
+    println!(
+        "Parsed {} hourly fuel-mix rows; wrote {} estimated average-intensity \
+         observations; skipped {} hours with no positive generation (gaps, not \
+         zeros).",
+        summary.hours_parsed, summary.observations_written, summary.hours_skipped,
+    );
+    println!("Cache updated: {}", args.cache.display());
+    for w in &summary.warnings {
+        println!("Warning: {w}");
+    }
+    Ok(())
+}
+
+fn fmt_hour(dt: time::OffsetDateTime) -> String {
+    dt.format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_else(|_| format!("{dt:?}"))
 }
 
 #[cfg(test)]

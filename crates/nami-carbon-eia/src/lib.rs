@@ -3,10 +3,10 @@
 //! Phase 0 status: the historical cache format ([`HistoricalCache`]),
 //! EIA-930 `fuel-type-data` parsing ([`parse_fuel_type_data`]), the
 //! eGRID factor-table loader ([`EgridFactors`]), carbon-intensity
-//! derivation ([`derive_intensity`]), and the historical-pattern
-//! forecast model ([`historical_pattern_forecast`]) are implemented.
-//! The EIA HTTP client lands in a subsequent session per `CLAUDE.md`'s
-//! phased implementation plan.
+//! derivation ([`derive_intensity`]), the historical-pattern forecast
+//! model ([`historical_pattern_forecast`]), and the paginated EIA fetch +
+//! cache refresh ([`refresh_region_cache`]) are implemented. Live API
+//! tests behind the `live-eia` feature land next per `CLAUDE.md`.
 //!
 //! The committed `data/egrid-factors.toml` is produced by the
 //! `refresh-egrid` maintainer tool (behind the `egrid-refresh` feature),
@@ -39,6 +39,7 @@ mod derive;
 mod egrid;
 mod error;
 mod forecast;
+mod refresh;
 
 pub use api::{FuelMixHour, parse_fuel_type_data, region_from_respondent, respondent_code};
 pub use cache::{
@@ -48,3 +49,4 @@ pub use derive::{DERIVATION_METHODOLOGY, DerivedObservation, derive_intensity};
 pub use egrid::{DEFAULT_EGRID_PATH, EGRID_SCHEMA_VERSION, EgridFactors, EgridFile};
 pub use error::{Error, Result};
 pub use forecast::{DEFAULT_FORECAST_WEEKS, historical_pattern_forecast};
+pub use refresh::{RefreshSummary, fetch_region_json, process_response, refresh_region_cache};
