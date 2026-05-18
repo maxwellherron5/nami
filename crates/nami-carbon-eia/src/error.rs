@@ -55,6 +55,12 @@ pub enum Error {
     /// A value returned by EIA failed validation or violated invariants.
     #[error("eia returned malformed data: {0}")]
     Malformed(String),
+
+    /// Carbon intensity could not be derived for a given hour (e.g. no
+    /// positive generation after clamping). Not a bug — the caller treats
+    /// the hour as a gap rather than inventing a number.
+    #[error("could not derive intensity: {0}")]
+    DerivationFailed(String),
 }
 
 /// Result alias for the EIA provider.

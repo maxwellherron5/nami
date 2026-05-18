@@ -35,6 +35,31 @@ generation*, not EIA's reported "total net generation" field — these
 don't always match, and using the sum makes the numerator and
 denominator come from the same column.
 
+Because `emission_factor` is already gCO₂/kWh and generation is MWh, the
+×1000 (kWh/MWh) cancels between numerator and denominator: the result is
+a generation-weighted mean of per-fuel factors, directly in gCO₂/kWh.
+No explicit MWh↔kWh conversion is applied in the weighted mean itself
+(the lb/MWh→gCO₂/kWh conversion already happened at the eGRID load
+boundary).
+
+### Negative generation and empty hours (item 8 — implemented)
+
+Implemented in `nami_carbon_eia::derive_intensity`, producing a
+`CarbonObservation` labelled `eia-930-v1+egrid-2023-ba`.
+
+- **Negative per-fuel generation is clamped to 0**, with a note listing
+  each clamped fuel and its raw value. Net-negative net generation is a
+  small accounting artifact; counting it would yield negative
+  "emissions" and could drive the denominator non-positive. Clamping a
+  fuel to 0 is equivalent to excluding it from both sums.
+- **An hour with no positive generation after clamping is refused**
+  (`Error::DerivationFailed`), never zeroed — no defensible number
+  exists, so the caller treats the hour as a gap (consistent with
+  "refuse to estimate").
+- Item-6 normalization provenance (`FuelMixHour::notes`, e.g.
+  unknown-fuel→`UNK` mappings) is **carried forward** into the derived
+  result's `warnings`, so no assumption is hidden downstream.
+
 ### Fuel-type normalization (implemented, item 6)
 
 The live EIA-930 API returns more granular codes than the 9-category

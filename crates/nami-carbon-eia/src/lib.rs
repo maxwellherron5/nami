@@ -1,11 +1,11 @@
 //! EIA-930 + EPA eGRID public-data carbon provider for `nami`.
 //!
 //! Phase 0 status: the historical cache format ([`HistoricalCache`]),
-//! EIA-930 `fuel-type-data` parsing ([`parse_fuel_type_data`]), and the
-//! eGRID factor-table loader ([`EgridFactors`]) are implemented. The
-//! EIA HTTP client, carbon-intensity derivation, and historical-pattern
-//! forecast model land in subsequent sessions per `CLAUDE.md`'s phased
-//! implementation plan.
+//! EIA-930 `fuel-type-data` parsing ([`parse_fuel_type_data`]), the
+//! eGRID factor-table loader ([`EgridFactors`]), and carbon-intensity
+//! derivation ([`derive_intensity`]) are implemented. The EIA HTTP
+//! client and the historical-pattern forecast model land in subsequent
+//! sessions per `CLAUDE.md`'s phased implementation plan.
 //!
 //! The committed `data/egrid-factors.toml` is produced by the
 //! `refresh-egrid` maintainer tool (behind the `egrid-refresh` feature),
@@ -34,10 +34,12 @@
 
 mod api;
 mod cache;
+mod derive;
 mod egrid;
 mod error;
 
 pub use api::{FuelMixHour, parse_fuel_type_data, region_from_respondent, respondent_code};
 pub use cache::{CACHE_SCHEMA_VERSION, DEFAULT_MAX_CACHE_AGE, HistoricalCache, RegionHistory};
+pub use derive::{DERIVATION_METHODOLOGY, DerivedObservation, derive_intensity};
 pub use egrid::{DEFAULT_EGRID_PATH, EGRID_SCHEMA_VERSION, EgridFactors, EgridFile};
 pub use error::{Error, Result};
