@@ -72,6 +72,45 @@ impl FuelType {
         FuelType::Oth,
         FuelType::Unk,
     ];
+
+    /// Map an EIA-930 fuel-type code to one of our nine categories.
+    ///
+    /// Returns `None` for codes that are not a primary generation fuel in
+    /// our taxonomy — including storage codes such as `BAT` (battery) and
+    /// `PS` (pumped storage), and any unrecognized code. Callers decide
+    /// how to treat `None` (the EIA provider excludes storage from the
+    /// generation mix and maps genuinely unknown codes to
+    /// [`FuelType::Unk`] with a surfaced note; see
+    /// `docs/eia-api-notes.md`).
+    ///
+    /// `GEO` (geothermal) maps to [`FuelType::Oth`], consistent with
+    /// CLAUDE.md's definition of `OTH` as covering biomass, geothermal,
+    /// etc.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use nami_core::FuelType;
+    ///
+    /// assert_eq!(FuelType::from_eia_code("NG"), Some(FuelType::Ng));
+    /// assert_eq!(FuelType::from_eia_code("geo"), Some(FuelType::Oth));
+    /// assert_eq!(FuelType::from_eia_code("BAT"), None); // storage
+    /// assert_eq!(FuelType::from_eia_code("ZZZ"), None); // unknown
+    /// ```
+    pub fn from_eia_code(code: &str) -> Option<FuelType> {
+        match code.to_ascii_uppercase().as_str() {
+            "COL" => Some(FuelType::Col),
+            "NG" => Some(FuelType::Ng),
+            "NUC" => Some(FuelType::Nuc),
+            "OIL" => Some(FuelType::Oil),
+            "WAT" => Some(FuelType::Wat),
+            "SUN" => Some(FuelType::Sun),
+            "WND" => Some(FuelType::Wnd),
+            "OTH" | "GEO" => Some(FuelType::Oth),
+            "UNK" => Some(FuelType::Unk),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for FuelType {
@@ -188,5 +227,22 @@ mod tests {
         assert_eq!(FuelType::Ng.as_code(), "NG");
         assert_eq!(FuelType::Wnd.as_code(), "WND");
         assert_eq!(FuelType::ALL.len(), 9);
+    }
+
+    #[test]
+    fn from_eia_code_maps_canonical_and_geo() {
+        for ft in FuelType::ALL {
+            assert_eq!(FuelType::from_eia_code(ft.as_code()), Some(*ft));
+        }
+        // GEO folds into OTH per CLAUDE.md's OTH definition.
+        assert_eq!(FuelType::from_eia_code("GEO"), Some(FuelType::Oth));
+        assert_eq!(FuelType::from_eia_code("geo"), Some(FuelType::Oth));
+        // Case-insensitive.
+        assert_eq!(FuelType::from_eia_code("ng"), Some(FuelType::Ng));
+        // Storage and unknown are not primary generation fuels.
+        assert_eq!(FuelType::from_eia_code("BAT"), None);
+        assert_eq!(FuelType::from_eia_code("PS"), None);
+        assert_eq!(FuelType::from_eia_code("ZZZ"), None);
+        assert_eq!(FuelType::from_eia_code(""), None);
     }
 }

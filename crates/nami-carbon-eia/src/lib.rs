@@ -1,9 +1,10 @@
 //! EIA-930 + EPA eGRID public-data carbon provider for `nami`.
 //!
 //! Phase 0 status: the on-disk historical cache format ([`HistoricalCache`])
-//! is implemented. The HTTP client, fixture parsing, eGRID factor table,
-//! carbon-intensity derivation, and historical-pattern forecast model all
-//! land in subsequent sessions per `CLAUDE.md`'s phased implementation plan.
+//! and EIA-930 `fuel-type-data` parsing ([`parse_fuel_type_data`]) are
+//! implemented. The HTTP client, eGRID factor table, carbon-intensity
+//! derivation, and historical-pattern forecast model all land in
+//! subsequent sessions per `CLAUDE.md`'s phased implementation plan.
 //!
 //! When implemented, this crate will provide:
 //!
@@ -24,8 +25,10 @@
 #![deny(missing_docs)]
 #![deny(rust_2018_idioms)]
 
+mod api;
 mod cache;
 mod error;
 
+pub use api::{FuelMixHour, parse_fuel_type_data, region_from_respondent, respondent_code};
 pub use cache::{CACHE_SCHEMA_VERSION, DEFAULT_MAX_CACHE_AGE, HistoricalCache, RegionHistory};
 pub use error::{Error, Result};

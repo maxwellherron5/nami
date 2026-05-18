@@ -34,11 +34,23 @@ generation*, not EIA's reported "total net generation" field — these
 don't always match, and using the sum makes the numerator and
 denominator come from the same column.
 
+### Fuel-type normalization (implemented, item 6)
+
+The live EIA-930 API returns more granular codes than the 9-category
+schema. Normalization (see `docs/eia-api-notes.md` for the full table):
+
+- `GEO` (geothermal) is folded into `OTH`; same-hour `GEO`+`OTH` MWh are
+  summed.
+- `BAT` (battery) and `PS` (pumped storage) are **excluded** from the
+  generation mix: storage is not primary generation, has no intrinsic
+  emission factor, and can be negative. It therefore never enters the
+  `Σ generation` numerator or denominator.
+- Unrecognized codes become `UNK` with a surfaced note.
+
 ### Handling `Other` and `Unknown` fuel categories
 
-EIA-930 reports a non-trivial fraction of generation under `OTH`
-(biomass, geothermal, small/confidential) and `UNK`. These need an
-emission factor.
+After normalization, `OTH` (now including geothermal) and `UNK` still
+need an emission factor.
 
 **Planned approach (not yet implemented):** assign `OTH` and `UNK` the
 eGRID non-baseload composite factor for the region, with a documented
