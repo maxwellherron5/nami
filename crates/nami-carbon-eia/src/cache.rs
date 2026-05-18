@@ -43,6 +43,10 @@ pub const CACHE_SCHEMA_VERSION: u32 = 1;
 /// specifies the cache "refresh daily", so 24h is the default bound.
 pub const DEFAULT_MAX_CACHE_AGE: Duration = Duration::hours(24);
 
+/// Default committed-runtime location of the cache, relative to the
+/// workspace root. The file itself is gitignored (populated at runtime).
+pub const DEFAULT_CACHE_PATH: &str = "data/historical-cache.json";
+
 /// One region's cached hourly observations, strictly ascending by `at`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RegionHistory {

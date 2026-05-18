@@ -76,9 +76,17 @@ impl BestWindowScheduler {
 
 /// A window's score: its duration-weighted mean intensity plus the
 /// aggregated confidence of the forecast points that backed it.
-struct Scored {
-    intensity: CarbonIntensity,
-    confidence: Confidence,
+///
+/// Public so callers (e.g. the CLI building a `RunReport`) can obtain the
+/// run-now and selected-window numbers from the *same* computation the
+/// scheduler used — the report can never diverge from the decision.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WindowScore {
+    /// Duration-weighted mean intensity over the window.
+    pub intensity: CarbonIntensity,
+    /// Aggregated confidence (most-conservative level across the
+    /// overlapped hourly forecast points; sample counts summed).
+    pub confidence: Confidence,
 }
 
 /// Score `[start, start + duration)` against the hourly forecast.
@@ -86,11 +94,11 @@ struct Scored {
 /// Returns `None` if any overlapped hour is absent from the forecast
 /// (unscorable — we do not estimate on partial data) or if the result is
 /// not a valid intensity.
-fn score_window(
+pub fn score_window(
     start: OffsetDateTime,
     duration: Duration,
     forecast: &[ForecastPoint],
-) -> Option<Scored> {
+) -> Option<WindowScore> {
     let end = start.checked_add(duration)?;
     let mut bucket = floor_to_hour(start).ok()?;
 
@@ -129,7 +137,7 @@ fn score_window(
             "window confidence = most conservative of {levels_seen} hourly forecast point(s)"
         )],
     };
-    Some(Scored {
+    Some(WindowScore {
         intensity,
         confidence,
     })
@@ -192,7 +200,7 @@ impl Scheduler for BestWindowScheduler {
             };
         }
 
-        let mut scorable: Vec<(OffsetDateTime, Scored)> = Vec::new();
+        let mut scorable: Vec<(OffsetDateTime, WindowScore)> = Vec::new();
         for c in &candidates {
             if let Some(s) = score_window(c.start, duration, forecast) {
                 scorable.push((c.start, s));

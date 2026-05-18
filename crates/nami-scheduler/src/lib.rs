@@ -14,7 +14,7 @@ mod fallback;
 mod materiality;
 mod window;
 
-pub use best_window::BestWindowScheduler;
+pub use best_window::{BestWindowScheduler, WindowScore, score_window};
 pub use error::{Error, Result};
 pub use fallback::static_fallback_decision;
 pub use materiality::{DEFAULT_MATERIALITY_THRESHOLD_PCT, MaterialityVerdict, assess_materiality};

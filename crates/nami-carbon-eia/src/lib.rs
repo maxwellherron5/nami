@@ -41,7 +41,9 @@ mod error;
 mod forecast;
 
 pub use api::{FuelMixHour, parse_fuel_type_data, region_from_respondent, respondent_code};
-pub use cache::{CACHE_SCHEMA_VERSION, DEFAULT_MAX_CACHE_AGE, HistoricalCache, RegionHistory};
+pub use cache::{
+    CACHE_SCHEMA_VERSION, DEFAULT_CACHE_PATH, DEFAULT_MAX_CACHE_AGE, HistoricalCache, RegionHistory,
+};
 pub use derive::{DERIVATION_METHODOLOGY, DerivedObservation, derive_intensity};
 pub use egrid::{DEFAULT_EGRID_PATH, EGRID_SCHEMA_VERSION, EgridFactors, EgridFile};
 pub use error::{Error, Result};
