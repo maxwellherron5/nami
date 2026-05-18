@@ -6,7 +6,8 @@
 //! derivation ([`derive_intensity`]), the historical-pattern forecast
 //! model ([`historical_pattern_forecast`]), and the paginated EIA fetch +
 //! cache refresh ([`refresh_region_cache`]) are implemented. Live API
-//! tests behind the `live-eia` feature land next per `CLAUDE.md`.
+//! tests are gated behind the `live-eia` feature (off by default;
+//! `tests/live_eia.rs`, requires `EIA_API_KEY`).
 //!
 //! The committed `data/egrid-factors.toml` is produced by the
 //! `refresh-egrid` maintainer tool (behind the `egrid-refresh` feature),

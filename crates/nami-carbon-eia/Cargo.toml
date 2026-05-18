@@ -32,3 +32,8 @@ reqwest = { workspace = true }
 time = { workspace = true }
 async-trait = "0.1"
 calamine = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Integration test crates don't inherit normal deps; the `live-eia`
+# tests need a runtime to drive the async fetch.
+tokio = { workspace = true }
