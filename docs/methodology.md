@@ -12,8 +12,8 @@ which version of the code produced it.
 | Label | Status | Notes |
 |---|---|---|
 | `egrid-2023-ba` | implemented | eGRID emission-factor table (item 7) |
-| `eia-930-v1+egrid-2023-ba` | not yet implemented | Phase 0 derivation target (item 8) |
-| `historical-pattern-mean-8w-hour-dow-month-v1` | not yet implemented | Phase 0 forecast model |
+| `eia-930-v1+egrid-2023-ba` | implemented | carbon-intensity derivation (item 8) |
+| `historical-pattern-mean-{N}w-hour-dow-month-v1` | implemented | forecast model (item 9), default N=8 |
 | `static-fallback-annual-v1` | implemented | the static-table provider |
 
 ## Carbon intensity derivation
@@ -129,9 +129,30 @@ For each forecast point, the model emits:
 
 - Mean.
 - Sample count.
-- Variance / interval (1σ band over the matching samples).
-- Confidence label, derived from sample count and variance.
-- Methodology label (`historical-pattern-mean-8w-hour-dow-month-v1`).
+- Interval: the 1σ band using the **sample** standard deviation (n−1
+  denominator; `0` when n < 2, which `Confidence::assess` treats as
+  non-computable).
+- Confidence via `Confidence::assess` (sample count + relative interval
+  width + freshness cap).
+- Methodology label `historical-pattern-mean-{N}w-hour-dow-month-v1`
+  with the actual `N` embedded for traceability (default N=8).
+
+Implemented in `nami_carbon_eia::historical_pattern_forecast` (item 9).
+Stances baked in (consequences of already-documented policy):
+
+- **A pure-cache forecast is inherently `HistoricalCacheOnly`.** It
+  never consults live observed data, so its confidence is capped at
+  `Low` by the freshness rule — this is set by the model, not the
+  caller, so the honesty cannot be bypassed.
+- **Sample window is `(now − N weeks, now]`**, anchored on a
+  caller-supplied `now` (deterministic/testable). Matching is by
+  **exact** day-of-week and month (not weekday/weekend or season).
+- **Hours with zero matching samples are omitted**, never invented; the
+  result has fewer points than the horizon has hours and the scheduler
+  treats the missing hours as gaps (consistent with "refuse to
+  estimate"). A region with no cached history yields no forecast.
+- Horizon start is floored to the hour; points are hour-aligned UTC and
+  ascending.
 
 The model is intentionally simple. More sophisticated approaches (e.g.,
 seasonal-trend decomposition, state-space models) are deferred to
