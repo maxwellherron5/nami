@@ -1,9 +1,8 @@
 //! The `nami` command-line entry point.
 //!
-//! Phase 0 status: `run` (subprocess wrapping with signal forwarding and
-//! exit-code propagation), `preview`, and `refresh` are implemented;
-//! `forecast` and `status` are still stubs (their handlers panic) and are
-//! outside the Phase 0 implementation scope in `CLAUDE.md`.
+//! All five subcommands are implemented: `run` (subprocess wrapping with
+//! signal forwarding and exit-code propagation), `preview`, `refresh`,
+//! `forecast`, and `status`.
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -12,9 +11,11 @@ use tracing_subscriber::EnvFilter;
 
 use nami_core::Region;
 
+mod forecast;
 mod preview;
 mod run;
 mod sink;
+mod status;
 
 /// Conservative, uncertainty-aware, public-data carbon-aware scheduler.
 #[derive(Debug, Parser)]
@@ -93,6 +94,14 @@ struct StatusArgs {
     /// summarize that report's decision and provenance.
     #[arg(long)]
     report: Option<std::path::PathBuf>,
+
+    /// Historical cache file to inspect.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_CACHE_PATH)]
+    cache: std::path::PathBuf,
+
+    /// eGRID factor table to check.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_EGRID_PATH)]
+    egrid: std::path::PathBuf,
 }
 
 /// Args for `nami forecast`.
@@ -105,6 +114,14 @@ struct ForecastArgs {
     /// Forecast horizon, e.g. `24h`. Defaults to 24h.
     #[arg(long, value_parser = parse_duration, default_value = "24h")]
     horizon: Duration,
+
+    /// Historical cache file to forecast from.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_CACHE_PATH)]
+    cache: std::path::PathBuf,
+
+    /// Look-back window, in weeks, for the historical-pattern model.
+    #[arg(long, default_value_t = nami_carbon_eia::DEFAULT_FORECAST_WEEKS)]
+    weeks: u32,
 }
 
 /// Args for `nami refresh`.
@@ -156,8 +173,8 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Run(args) => run(args),
         Command::Preview(args) => preview::run(args),
-        Command::Status(args) => status(args),
-        Command::Forecast(args) => forecast(args),
+        Command::Status(args) => status::run(args),
+        Command::Forecast(args) => forecast::run(args),
         Command::Refresh(args) => refresh(args),
     }
 }
@@ -180,14 +197,6 @@ fn run(args: RunArgs) -> Result<()> {
         .enable_all()
         .build()?;
     rt.block_on(run::run(args))
-}
-
-fn status(_args: StatusArgs) -> Result<()> {
-    unimplemented!("nami status: report reader lands in a later session")
-}
-
-fn forecast(_args: ForecastArgs) -> Result<()> {
-    unimplemented!("nami forecast: provider integration lands in a later session")
 }
 
 fn refresh(args: RefreshArgs) -> Result<()> {

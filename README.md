@@ -75,6 +75,12 @@ nami preview --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- carg
 
 # Refresh one region's slice of the local historical cache from EIA-930
 EIA_API_KEY=… nami refresh --region MISO          # --weeks N (default 8)
+
+# Print the historical-pattern forecast points + confidence for a region
+nami forecast --region MISO --horizon 24h
+
+# Cache freshness, data sources, supported regions (+ optional report summary)
+nami status [--report run-report.json]
 ```
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
@@ -86,20 +92,24 @@ EIA_API_KEY=… nami refresh --region MISO          # --weeks N (default 8)
 - `refresh` needs `EIA_API_KEY` (free registration; a missing key is a
   hard error, never a silent fallback). It updates only the requested
   region and preserves the rest of the cache.
+- `forecast` is a read-only query over the local cache (`--cache`,
+  `--weeks`); hours with no matching samples are omitted (never invented)
+  and a cache-only basis caps confidence at `Low`.
+- `status` is read-only and offline; it surfaces degraded states
+  (missing/unusable cache, missing eGRID table, unset `EIA_API_KEY`)
+  loudly rather than hiding them.
 - Region detection is not implemented; `--region` is required (one of
   CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
-- The `forecast` and `status` subcommands are **not yet implemented**
-  (their handlers currently panic); they are placeholders for later work.
 
 ## Status
 
-Phase 0 implementation is complete: EIA-930 fetch + paginated cache
-refresh, the eGRID factor table, carbon-intensity derivation, the
-historical-pattern forecast, scheduler decision logic, `preview`, and
-`run` (subprocess wrapping with signal forwarding and exit-code
-propagation) are all implemented and tested, with live-API tests gated
-behind the `live-eia` feature. The `forecast` and `status` CLI handlers
-remain stubs and are out of the Phase 0 implementation scope.
+Phase 0 is complete: all five subcommands (`run`, `preview`, `refresh`,
+`forecast`, `status`) are implemented and tested. EIA-930 fetch +
+paginated cache refresh, the eGRID factor table, carbon-intensity
+derivation, the historical-pattern forecast, scheduler decision logic,
+and subprocess wrapping (signal forwarding + exit-code propagation) are
+all in place, with live-API tests gated behind the `live-eia` feature.
+Region auto-detection remains a Phase 1 item (`--region` is required).
 
 See:
 
