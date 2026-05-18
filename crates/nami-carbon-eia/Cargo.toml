@@ -10,14 +10,25 @@ description = "EIA-930 + EPA eGRID public-data carbon provider for nami."
 [features]
 # Gates live EIA API tests. Off by default; requires EIA_API_KEY in env.
 live-eia = []
+# Gates the eGRID maintainer tool (downloads + converts the pinned eGRID
+# release to data/egrid-factors.toml). Off by default; pulls `calamine`
+# only when enabled, so the shipped `nami` binary never includes it.
+egrid-refresh = ["dep:calamine"]
+
+[[bin]]
+name = "refresh-egrid"
+path = "src/bin/refresh_egrid.rs"
+required-features = ["egrid-refresh"]
 
 [dependencies]
 nami-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+toml = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 reqwest = { workspace = true }
 time = { workspace = true }
 async-trait = "0.1"
+calamine = { workspace = true, optional = true }

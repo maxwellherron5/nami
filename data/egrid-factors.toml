@@ -1,0 +1,89 @@
+schema_version = 1
+egrid_release = "eGRID2023"
+egrid_data_year = 2023
+source_url = "https://www.epa.gov/system/files/documents/2025-06/egrid2023_data_rev2.xlsx"
+generated_at = "2026-05-18T01:07:38.079092Z"
+units = "lb_co2_per_mwh"
+methodology = "egrid-2023-ba"
+notes = [
+    "Per-fuel BA CO2 output emission rates (lb/MWh) from eGRID2023 sheet BA23.",
+    "COL=BACCO2RT, NG=BAGCO2RT, OIL=BAOCO2RT. NUC/WAT/SUN/WND=0 (non-combustion). OTH/UNK=BANBCO2 (non-baseload composite).",
+    "Missing per-fuel rate falls back to BANBCO2; such cases are noted individually below.",
+]
+
+[regions.CAISO]
+COL = 1133.331
+NG = 862.196
+NUC = 0.0
+OIL = 1802.528
+OTH = 878.629
+SUN = 0.0
+UNK = 878.629
+WAT = 0.0
+WND = 0.0
+
+[regions.ERCOT]
+COL = 2324.807
+NG = 867.401
+NUC = 0.0
+OIL = 2894.407
+OTH = 1246.406
+SUN = 0.0
+UNK = 1246.406
+WAT = 0.0
+WND = 0.0
+
+[regions.ISONE]
+COL = 2299.791
+NG = 843.608
+NUC = 0.0
+OIL = 2201.751
+OTH = 887.899
+SUN = 0.0
+UNK = 887.899
+WAT = 0.0
+WND = 0.0
+
+[regions.MISO]
+COL = 2191.029
+NG = 862.998
+NUC = 0.0
+OIL = 189.371
+OTH = 1541.243
+SUN = 0.0
+UNK = 1541.243
+WAT = 0.0
+WND = 0.0
+
+[regions.NYISO]
+COL = 0.0
+NG = 912.915
+NUC = 0.0
+OIL = 1120.94
+OTH = 1012.153
+SUN = 0.0
+UNK = 1012.153
+WAT = 0.0
+WND = 0.0
+
+[regions.PJM]
+COL = 2215.59
+NG = 867.031
+NUC = 0.0
+OIL = 1918.987
+OTH = 1423.423
+SUN = 0.0
+UNK = 1423.423
+WAT = 0.0
+WND = 0.0
+
+[regions.SPP]
+COL = 2258.156
+NG = 1075.905
+NUC = 0.0
+OIL = 2867.99
+OTH = 1661.165
+SUN = 0.0
+UNK = 1661.165
+WAT = 0.0
+WND = 0.0

@@ -168,9 +168,11 @@ impl CarbonIntensity {
 ///
 /// In gCO₂/kWh, sharing units with [`CarbonIntensity`] so derivation math
 /// composes without unit conversions.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct EmissionFactor {
-    /// gCO₂-equivalent per kWh of generation from this fuel.
+    /// gCO₂-equivalent per kWh of generation from this fuel. Defaults to
+    /// `0.0` (a valid, non-negative factor — useful as a placeholder
+    /// before a table cell is filled).
     grams_per_kwh: f64,
 }
 

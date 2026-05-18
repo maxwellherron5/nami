@@ -11,7 +11,8 @@ which version of the code produced it.
 
 | Label | Status | Notes |
 |---|---|---|
-| `eia-930-v1+egrid-2024-subregion` | not yet implemented | Phase 0 target |
+| `egrid-2023-ba` | implemented | eGRID emission-factor table (item 7) |
+| `eia-930-v1+egrid-2023-ba` | not yet implemented | Phase 0 derivation target (item 8) |
 | `historical-pattern-mean-8w-hour-dow-month-v1` | not yet implemented | Phase 0 forecast model |
 | `static-fallback-annual-v1` | implemented | the static-table provider |
 
@@ -47,15 +48,35 @@ schema. Normalization (see `docs/eia-api-notes.md` for the full table):
   `Σ generation` numerator or denominator.
 - Unrecognized codes become `UNK` with a surfaced note.
 
-### Handling `Other` and `Unknown` fuel categories
+### Emission factors (eGRID, item 7 — implemented)
 
-After normalization, `OTH` (now including geothermal) and `UNK` still
-need an emission factor.
+Factors come from **EPA eGRID, balancing-authority level**, pinned to a
+specific release and committed as `data/egrid-factors.toml`.
 
-**Planned approach (not yet implemented):** assign `OTH` and `UNK` the
-eGRID non-baseload composite factor for the region, with a documented
-note in every report that this assumption was made. Sensitivity analysis
-will accompany the implementation.
+- **Pinned release:** eGRID2023 (rev2, 2025-06),
+  `https://www.epa.gov/system/files/documents/2025-06/egrid2023_data_rev2.xlsx`,
+  sheet `BA23`. Bumping the pin is a deliberate reviewed change.
+- **BA-level, not subregion.** Our `Region` *is* a balancing authority,
+  so eGRID's `BA` sheet maps 1:1 — no BA→subregion approximation.
+- **Per-fuel column mapping:**
+  `COL = BACCO2RT`, `NG = BAGCO2RT`, `OIL = BAOCO2RT`;
+  `NUC, WAT, SUN, WND = 0` (non-combustion: no direct CO₂);
+  `OTH, UNK = BANBCO2` (eGRID's non-baseload composite output emission
+  rate — the documented stand-in for the heterogeneous other/unknown
+  bucket, which after item-6 normalization also absorbs geothermal).
+  A missing per-fuel cell falls back to `BANBCO2` with a recorded note.
+- **Units & boundary.** The TOML stores raw eGRID **lb CO₂/MWh** exactly
+  as published (directly checkable against the workbook). Conversion to
+  internal gCO₂/kWh (`× 453.592 / 1000`) happens once, at the load
+  boundary in `EgridFactors`.
+- **Acquisition.** The committed TOML is produced by the `refresh-egrid`
+  maintainer tool (gated behind the `egrid-refresh` feature; pulls the
+  `.xlsx` reader only then). The shipped `nami` binary reads only the
+  committed TOML — never the network or Excel — preserving the static,
+  offline, reproducible, auditable design.
+
+`OTH`/`UNK` use the non-baseload composite as described above; this is
+the documented assumption that was previously marked "planned".
 
 ### Validation
 

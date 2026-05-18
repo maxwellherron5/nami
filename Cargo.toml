@@ -35,3 +35,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "si
 clap = { version = "4", features = ["derive"] }
 time = { version = "0.3", features = ["serde", "serde-well-known", "macros", "formatting", "parsing"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+toml = "0.8"
+# Tool-only: .xlsx reader for the eGRID maintainer tool. Gated behind the
+# `egrid-refresh` feature so it never enters the shipped `nami` binary.
+calamine = "0.26"
