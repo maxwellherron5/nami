@@ -13,6 +13,7 @@ use tracing_subscriber::EnvFilter;
 use nami_core::Region;
 
 mod preview;
+mod run;
 mod sink;
 
 /// Conservative, uncertainty-aware, public-data carbon-aware scheduler.
@@ -65,6 +66,16 @@ struct RunArgs {
     /// stdout at the end of the run.
     #[arg(long)]
     pub(crate) report: Option<std::path::PathBuf>,
+
+    /// Silence the wrapped command's stdout and stderr (`nami run` only).
+    /// `nami`'s own decision summary is still printed.
+    #[arg(long, default_value_t = false)]
+    pub(crate) quiet: bool,
+
+    /// Redirect the wrapped command's stdout and stderr to this file
+    /// (`nami run` only). Mutually exclusive with `--quiet`.
+    #[arg(long, conflicts_with = "quiet")]
+    pub(crate) log: Option<std::path::PathBuf>,
 
     /// The command to wrap. Everything after `--` is forwarded verbatim.
     #[arg(last = true, required = true)]
@@ -137,8 +148,13 @@ fn init_tracing(verbose: u8) {
     tracing_subscriber::fmt().with_env_filter(filter).init();
 }
 
-fn run(_args: RunArgs) -> Result<()> {
-    unimplemented!("nami run: subprocess wrapping lands in a later session (Phase 0 item 12)")
+fn run(args: RunArgs) -> Result<()> {
+    // Only `run` needs an async runtime (timers, subprocess, signals);
+    // preview/forecast/status stay sync.
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    rt.block_on(run::run(args))
 }
 
 fn status(_args: StatusArgs) -> Result<()> {

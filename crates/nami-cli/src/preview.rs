@@ -39,7 +39,7 @@ use crate::sink::JsonFileSink;
 const STATIC_METHODOLOGY: &str = "static-fallback-annual-v1";
 
 /// Outcome of attempting to load the historical cache.
-enum CacheState {
+pub(crate) enum CacheState {
     /// Loaded; `bool` is whether it is stale (older than the max age).
     Present(Box<HistoricalCache>, bool),
     /// No cache file present (a normal state, not an error).
@@ -65,7 +65,7 @@ pub fn run(args: RunArgs) -> Result<()> {
     Ok(())
 }
 
-fn load_cache(path: &str, now: OffsetDateTime) -> CacheState {
+pub(crate) fn load_cache(path: &str, now: OffsetDateTime) -> CacheState {
     match HistoricalCache::load(path) {
         Ok(c) => {
             let stale = c.is_stale(now, DEFAULT_MAX_CACHE_AGE);
@@ -78,7 +78,11 @@ fn load_cache(path: &str, now: OffsetDateTime) -> CacheState {
 
 /// Assemble the [`RunReport`]. Pure given `now` and `cache` (forecast and
 /// scheduler are pure), so it is unit-testable without a clock or files.
-fn assemble(args: &RunArgs, now: OffsetDateTime, cache: CacheState) -> Result<RunReport> {
+pub(crate) fn assemble(
+    args: &RunArgs,
+    now: OffsetDateTime,
+    cache: CacheState,
+) -> Result<RunReport> {
     let region = args.region.ok_or_else(|| {
         anyhow!(
             "no --region given and automatic region detection is not implemented \
@@ -338,7 +342,7 @@ fn refuse_text(r: &RefuseReason) -> String {
 }
 
 /// Build the careful, language-rule-compliant terminal summary.
-fn human_summary(r: &RunReport) -> String {
+pub(crate) fn human_summary(r: &RunReport) -> String {
     let mut s = String::new();
     s.push_str(&format!(
         "nami preview — region {} — deadline {}\n",
@@ -438,6 +442,8 @@ mod tests {
             deadline,
             region,
             report: None,
+            quiet: false,
+            log: None,
             command: vec!["python".into(), "train.py".into()],
         }
     }
