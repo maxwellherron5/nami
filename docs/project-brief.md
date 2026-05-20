@@ -59,7 +59,11 @@ These add capability *if* they preserve the free-and-auditable property:
 - Open Grid Emissions provider.
 - CAISO / ERCOT / PJM / SPP / NYISO / MISO / ISONE public market feeds
   where licensing and access are compatible.
-- Better region detection (currently a placeholder).
+- Better region detection. Deterministic resolution (flag / `NAMI_REGION`
+  env / config file) is implemented in the `nami-region` crate;
+  IP-based geolocation remains deferred (third-party network call,
+  spatial dependency, and is in tension with the refuse-rather-than-
+  guess stance).
 - Provider capability comparison and selection.
 - UK Carbon Intensity API.
 - ENTSO-E transparency platform (Europe).

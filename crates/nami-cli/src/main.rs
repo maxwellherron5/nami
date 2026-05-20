@@ -63,7 +63,7 @@ struct RunArgs {
     pub(crate) deadline: time::OffsetDateTime,
 
     /// Grid region (one of: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
-    /// If omitted, region detection will be attempted.
+    /// If omitted: `NAMI_REGION`, then `region` in the nami config file.
     #[arg(long)]
     pub(crate) region: Option<Region>,
 
@@ -107,9 +107,10 @@ struct StatusArgs {
 /// Args for `nami forecast`.
 #[derive(Debug, clap::Args)]
 struct ForecastArgs {
-    /// Grid region to query.
+    /// Grid region to query. If omitted: `NAMI_REGION`, then the nami
+    /// config file's `region`.
     #[arg(long)]
-    region: Region,
+    region: Option<Region>,
 
     /// Forecast horizon, e.g. `24h`. Defaults to 24h.
     #[arg(long, value_parser = parse_duration, default_value = "24h")]
@@ -127,9 +128,10 @@ struct ForecastArgs {
 /// Args for `nami refresh`.
 #[derive(Debug, clap::Args)]
 struct RefreshArgs {
-    /// Grid region whose cache slice to refresh from EIA-930.
+    /// Grid region whose cache slice to refresh from EIA-930. If omitted:
+    /// `NAMI_REGION`, then the nami config file's `region`.
     #[arg(long)]
-    region: Region,
+    region: Option<Region>,
 
     /// Weeks of hourly history to fetch (ending now, UTC).
     #[arg(long, default_value_t = nami_carbon_eia::DEFAULT_FORECAST_WEEKS)]
@@ -166,6 +168,33 @@ fn parse_datetime(s: &str) -> Result<time::OffsetDateTime, String> {
         .map_err(|e| format!("could not parse `{s}` as RFC 3339 datetime: {e}"))
 }
 
+/// Resolve the region via the precedence chain (flag > `NAMI_REGION` >
+/// config file > refuse). When it came from anywhere other than the
+/// explicit flag, announce the source on stderr so the resolution is
+/// never silent (CLAUDE.md: do not hide how a value was chosen).
+pub(crate) fn resolve_region(flag: Option<Region>) -> Result<Region> {
+    let resolved = nami_region::resolve_default(flag).map_err(|e| {
+        anyhow::anyhow!("{e}\nsupported regions: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP")
+    })?;
+    match &resolved.source {
+        nami_region::RegionSource::Flag => {}
+        nami_region::RegionSource::Env => {
+            eprintln!(
+                "nami: region {} resolved from NAMI_REGION (no --region given)",
+                resolved.region
+            );
+        }
+        nami_region::RegionSource::Config(path) => {
+            eprintln!(
+                "nami: region {} resolved from config {} (no --region given)",
+                resolved.region,
+                path.display()
+            );
+        }
+    }
+    Ok(resolved.region)
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     init_tracing(cli.verbose);
@@ -200,13 +229,14 @@ fn run(args: RunArgs) -> Result<()> {
 }
 
 fn refresh(args: RefreshArgs) -> Result<()> {
+    let region = resolve_region(args.region)?;
     // Networked: needs an async runtime, like `run`.
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
     let now = time::OffsetDateTime::now_utc();
     let summary = rt.block_on(nami_carbon_eia::refresh_region_cache(
-        args.region,
+        region,
         args.weeks,
         &args.cache,
         &args.egrid,

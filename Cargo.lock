@@ -758,11 +758,9 @@ name = "nami-region"
 version = "0.1.0"
 dependencies = [
  "nami-core",
- "reqwest",
  "serde",
  "thiserror",
- "tokio",
- "tracing",
+ "toml",
 ]
 
 [[package]]

@@ -54,6 +54,11 @@ pub(crate) enum CacheState {
 /// Run `nami preview`: assemble the report, print a human summary, and
 /// (if `--report`) write the JSON report.
 pub fn run(args: RunArgs) -> Result<()> {
+    let region = crate::resolve_region(args.region)?;
+    let args = RunArgs {
+        region: Some(region),
+        ..args
+    };
     let now = OffsetDateTime::now_utc();
     let cache = load_cache(DEFAULT_CACHE_PATH, now);
     let report = assemble(&args, now, cache)?;
@@ -84,12 +89,12 @@ pub(crate) fn assemble(
     now: OffsetDateTime,
     cache: CacheState,
 ) -> Result<RunReport> {
-    let region = args.region.ok_or_else(|| {
-        anyhow!(
-            "no --region given and automatic region detection is not implemented \
-             yet; pass one of: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP"
-        )
-    })?;
+    // Callers resolve the region (flag / NAMI_REGION / config) before
+    // calling `assemble`; an unset region here is an internal invariant
+    // violation, not user-facing.
+    let region = args
+        .region
+        .ok_or_else(|| anyhow!("internal: region was not resolved before assemble"))?;
     let job = JobSpec {
         command: args.command.clone(),
         estimated_duration: args.duration,

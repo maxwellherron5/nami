@@ -19,6 +19,7 @@ use nami_core::{ConfidenceLevel, ForecastHorizon, ForecastPoint, Region};
 use crate::ForecastArgs;
 
 pub fn run(args: ForecastArgs) -> Result<()> {
+    let region = crate::resolve_region(args.region)?;
     let now = OffsetDateTime::now_utc();
 
     let cache = match HistoricalCache::load(&args.cache) {
@@ -28,10 +29,7 @@ pub fn run(args: ForecastArgs) -> Result<()> {
                 "No historical cache at {} — nothing to forecast.",
                 args.cache.display()
             );
-            println!(
-                "Populate it first: nami refresh --region {} (requires EIA_API_KEY).",
-                args.region
-            );
+            println!("Populate it first: nami refresh --region {region} (requires EIA_API_KEY).");
             return Ok(());
         }
         Err(e) => {
@@ -42,12 +40,12 @@ pub fn run(args: ForecastArgs) -> Result<()> {
     };
 
     let horizon = ForecastHorizon::new(now, args.horizon);
-    let points = historical_pattern_forecast(&cache, args.region, horizon, now, args.weeks);
-    let has_history = !cache.observations(args.region).is_empty();
+    let points = historical_pattern_forecast(&cache, region, horizon, now, args.weeks);
+    let has_history = !cache.observations(region).is_empty();
 
     print!(
         "{}",
-        render(args.region, args.weeks, args.horizon, has_history, &points)
+        render(region, args.weeks, args.horizon, has_history, &points)
     );
     Ok(())
 }

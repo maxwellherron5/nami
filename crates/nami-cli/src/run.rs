@@ -38,6 +38,11 @@ const GRACE_PERIOD: std::time::Duration = std::time::Duration::from_secs(10);
 /// process with the child's exit code (or 0 on a cancelled wait, or 1 on
 /// a refusal). It returns `Err` only for setup failures before scheduling.
 pub async fn run(args: RunArgs) -> Result<()> {
+    let region = crate::resolve_region(args.region)?;
+    let args = RunArgs {
+        region: Some(region),
+        ..args
+    };
     let (program, _) = args
         .command
         .split_first()

@@ -98,8 +98,15 @@ nami status [--report run-report.json]
 - `status` is read-only and offline; it surfaces degraded states
   (missing/unusable cache, missing eGRID table, unset `EIA_API_KEY`)
   loudly rather than hiding them.
-- Region detection is not implemented; `--region` is required (one of
-  CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
+- **Region resolution** (when `--region` is omitted): `NAMI_REGION` env
+  var, then `region = "<BA>"` in the nami config file
+  (`$NAMI_CONFIG`, else `$XDG_CONFIG_HOME/nami/config.toml`, else
+  `$HOME/.config/nami/config.toml`); otherwise refuse. No IP
+  geolocation, no timezone guessing — BA boundaries do not follow either,
+  and a heuristic would be confidently wrong too often. When a value
+  comes from anywhere other than the flag, `nami` announces the source
+  on stderr. Supported regions: CAISO, ERCOT, MISO, PJM, NYISO, ISONE,
+  SPP.
 
 ## Status
 
@@ -109,7 +116,10 @@ paginated cache refresh, the eGRID factor table, carbon-intensity
 derivation, the historical-pattern forecast, scheduler decision logic,
 and subprocess wrapping (signal forwarding + exit-code propagation) are
 all in place, with live-API tests gated behind the `live-eia` feature.
-Region auto-detection remains a Phase 1 item (`--region` is required).
+Deterministic region resolution (flag / `NAMI_REGION` env / config file)
+is in; IP-based auto-detection remains deferred (would add a third-party
+network call and a spatial dependency, and isn't aligned with the
+project's refuse-rather-than-guess stance).
 
 See:
 
