@@ -132,6 +132,23 @@ nami forecast --region MISO --horizon 24h
 nami status [--report run-report.json]
 ```
 
+### First-time setup with `nami init`
+
+```sh
+nami init --region MISO          # writes ~/.config/nami/config.toml
+                                 # plus a brief env diagnostic
+```
+
+`init` is non-destructive: it refuses to overwrite an existing config
+file unless you pass `--force`, and `--dry-run` prints what it would
+write without touching the filesystem. The path can be overridden with
+`--config <path>`; otherwise the same resolution chain as the region
+resolver is used (`$NAMI_CONFIG` → `$XDG_CONFIG_HOME/nami/config.toml`
+→ `$HOME/.config/nami/config.toml`). After writing, `nami init` prints a
+checklist of what still needs to happen (eGRID table, `EIA_API_KEY`,
+populated cache) — it deliberately does **not** run `nami refresh`
+itself.
+
 ### Profiles
 
 Hand-typing `--region`, `--duration`, and an RFC 3339 `--deadline` on
@@ -169,8 +186,8 @@ resolution is never silent.
 
 > **Coming next** (see [`docs/product-roadmap.md`](docs/product-roadmap.md)):
 > relative deadlines on the CLI itself (`--within 8h`, `--by 7am`),
-> `nami init` for guided setup, and `nami doctor` for environment
-> diagnostics.
+> `nami doctor` for richer environment diagnostics, and shell
+> completions.
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
   `--duration` (`30s`/`45m`/`2h`/`1d`), `--report <path>` (JSON

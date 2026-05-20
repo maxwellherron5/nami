@@ -12,6 +12,7 @@ use tracing_subscriber::EnvFilter;
 use nami_core::Region;
 
 mod forecast;
+mod init;
 mod preview;
 mod profile;
 mod run;
@@ -50,6 +51,11 @@ enum Command {
     /// Refresh one region's slice of the local historical cache from
     /// EIA-930 (requires `EIA_API_KEY`). Other regions are preserved.
     Refresh(RefreshArgs),
+
+    /// Write a minimal nami config file with a default region (and a
+    /// commented example profile), then print a brief diagnostic of
+    /// what else is needed before scheduling can produce decisions.
+    Init(InitArgs),
 }
 
 /// Args for `nami run` and `nami preview`.
@@ -135,6 +141,29 @@ struct ForecastArgs {
     weeks: u32,
 }
 
+/// Args for `nami init`.
+#[derive(Debug, clap::Args)]
+struct InitArgs {
+    /// Default grid region to record in the config file.
+    #[arg(long)]
+    region: Region,
+
+    /// Path to write to. Default: the nami config path (see `--help` of
+    /// `nami status` or the README) — `$NAMI_CONFIG` / `$XDG_CONFIG_HOME/
+    /// nami/config.toml` / `$HOME/.config/nami/config.toml`.
+    #[arg(long)]
+    config: Option<std::path::PathBuf>,
+
+    /// Overwrite an existing config file. Without this, `nami init`
+    /// refuses to clobber an existing file and asks you to edit it.
+    #[arg(long, default_value_t = false)]
+    force: bool,
+
+    /// Print what would be written without touching the filesystem.
+    #[arg(long, default_value_t = false)]
+    dry_run: bool,
+}
+
 /// Args for `nami refresh`.
 #[derive(Debug, clap::Args)]
 struct RefreshArgs {
@@ -215,6 +244,7 @@ fn main() -> Result<()> {
         Command::Status(args) => status::run(args),
         Command::Forecast(args) => forecast::run(args),
         Command::Refresh(args) => refresh(args),
+        Command::Init(args) => init::run(args),
     }
 }
 

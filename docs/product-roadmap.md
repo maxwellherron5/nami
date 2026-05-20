@@ -45,10 +45,16 @@ semantics, or the `RunReport` schema — it is pure surface polish.
   `RunReport`'s `deadline` is still RFC 3339. `7am` resolves against the
   host's local timezone, normalized to UTC immediately — the resolved
   value is echoed back on stderr so the user can verify it.
-- **`nami init`.** A guided first-run: writes a minimal `nami.toml`
-  with a configured `region`, checks `EIA_API_KEY` presence (without
-  ever printing the key), checks the `data/egrid-factors.toml` file,
-  and offers to run `nami refresh` once.
+- **`nami init` — shipped.** Writes a minimal config file with the
+  chosen `region` and a commented-out example profile at the same path
+  the region resolver reads from. Refuses to clobber existing files
+  without `--force`; `--dry-run` prints what would be written; atomic
+  write via temp file + rename. After writing, prints a brief checklist
+  (eGRID table, `EIA_API_KEY` presence, per-region cache) with concrete
+  next-step commands. Deliberately does **not** run `nami refresh`
+  itself — surprise network calls on first contact are out of character
+  for this tool. An interactive prompt mode for the region pick is a
+  future addition.
 - **`nami doctor`.** A diagnostic that reports each precondition's
   state and an actionable next step: eGRID table present, `EIA_API_KEY`
   set, cache present and fresh per region, supported region resolved.
