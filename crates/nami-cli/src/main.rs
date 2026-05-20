@@ -12,6 +12,7 @@ use tracing_subscriber::EnvFilter;
 use nami_core::Region;
 
 mod deadline;
+mod doctor;
 mod forecast;
 mod init;
 mod preview;
@@ -57,6 +58,12 @@ enum Command {
     /// commented example profile), then print a brief diagnostic of
     /// what else is needed before scheduling can produce decisions.
     Init(InitArgs),
+
+    /// Run preflight precondition checks (region resolves, eGRID
+    /// table loads, EIA_API_KEY set, cache fresh) with pass/warn/fail
+    /// tagging and a suggested fix per failing check. Exits nonzero
+    /// on any failure (and with `--strict`, on warnings too).
+    Doctor(DoctorArgs),
 }
 
 /// Args for `nami run` and `nami preview`.
@@ -170,6 +177,27 @@ struct ForecastArgs {
     weeks: u32,
 }
 
+/// Args for `nami doctor`.
+#[derive(Debug, clap::Args)]
+struct DoctorArgs {
+    /// Region to check. If omitted, uses the same resolution chain as
+    /// `nami run` (NAMI_REGION env, then the nami config file).
+    #[arg(long)]
+    region: Option<Region>,
+
+    /// Historical cache file to inspect.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_CACHE_PATH)]
+    cache: std::path::PathBuf,
+
+    /// eGRID factor table to check.
+    #[arg(long, default_value = nami_carbon_eia::DEFAULT_EGRID_PATH)]
+    egrid: std::path::PathBuf,
+
+    /// Exit nonzero on warnings too (default: only on failures).
+    #[arg(long, default_value_t = false)]
+    strict: bool,
+}
+
 /// Args for `nami init`.
 #[derive(Debug, clap::Args)]
 struct InitArgs {
@@ -274,6 +302,7 @@ fn main() -> Result<()> {
         Command::Forecast(args) => forecast::run(args),
         Command::Refresh(args) => refresh(args),
         Command::Init(args) => init::run(args),
+        Command::Doctor(args) => doctor::run(args),
     }
 }
 

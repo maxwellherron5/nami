@@ -133,6 +133,11 @@ nami forecast --region MISO --horizon 24h
 
 # Cache freshness, data sources, supported regions (+ optional report summary).
 nami status [--report run-report.json]
+
+# Preflight checks with explicit pass/warn/fail tagging and a suggested
+# fix per failing check. Exits nonzero on failures; --strict also exits
+# nonzero on warnings (useful as a CI gate before scheduling).
+nami doctor [--region <BA>] [--strict]
 ```
 
 ### First-time setup with `nami init`
@@ -201,8 +206,7 @@ Deadline forms accepted (mutually exclusive):
   `2026-05-20T07:00:00-04:00`).
 
 > **Coming next** (see [`docs/product-roadmap.md`](docs/product-roadmap.md)):
-> `nami doctor` for richer environment diagnostics, and shell
-> completions.
+> shell completions.
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
   `--duration` (`30s`/`45m`/`2h`/`1d`), `--report <path>` (JSON

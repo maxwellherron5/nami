@@ -61,10 +61,15 @@ semantics, or the `RunReport` schema — it is pure surface polish.
   itself — surprise network calls on first contact are out of character
   for this tool. An interactive prompt mode for the region pick is a
   future addition.
-- **`nami doctor`.** A diagnostic that reports each precondition's
-  state and an actionable next step: eGRID table present, `EIA_API_KEY`
-  set, cache present and fresh per region, supported region resolved.
-  Read-only.
+- **`nami doctor` — shipped.** Walks preconditions (region resolves
+  via the regular chain, eGRID factor table loads, `EIA_API_KEY` set,
+  historical cache present and not stale for the resolved region) with
+  explicit `ok` / `warn` / `fail` tagging and a concrete fix line per
+  failing check. Exits nonzero on any `fail`; `--strict` also exits
+  nonzero on `warn` — useful as a CI preflight gate. Composes the same
+  region resolver and cache/freshness logic the scheduling path uses,
+  so a green `nami doctor` means `nami preview` / `nami run` will not
+  fall back due to a missing precondition.
 - **Friendlier output.** Shell completions (bash/zsh/fish). Cleaner
   refusal messages that lead with the user's next action ("set
   `NAMI_REGION` to one of …"). The unimplemented-subcommand panic path
