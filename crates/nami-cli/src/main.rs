@@ -11,6 +11,7 @@ use tracing_subscriber::EnvFilter;
 
 use nami_core::Region;
 
+mod deadline;
 mod forecast;
 mod init;
 mod preview;
@@ -72,9 +73,37 @@ struct RunArgs {
     pub(crate) duration: Option<Duration>,
 
     /// Latest UTC instant the job is allowed to *finish*, RFC 3339 format.
-    /// Required unless `--profile` supplies a value (via `deadline` or `within`).
-    #[arg(long, value_parser = parse_datetime, required_unless_present = "profile")]
+    /// Required unless `--profile`, `--within`, or `--by` supplies one.
+    #[arg(
+        long,
+        value_parser = parse_datetime,
+        required_unless_present_any = ["profile", "within", "by"],
+        conflicts_with_all = ["within", "by"],
+    )]
     pub(crate) deadline: Option<time::OffsetDateTime>,
+
+    /// Deadline as a duration from now: `--within 8h`, `--within 90m`.
+    /// Alternative to `--deadline` / `--by`. Echoed back as the resolved
+    /// UTC instant on stderr.
+    #[arg(
+        long,
+        value_parser = parse_duration,
+        conflicts_with_all = ["deadline", "by"],
+    )]
+    pub(crate) within: Option<Duration>,
+
+    /// Deadline as a next-occurrence time-of-day **interpreted as UTC**:
+    /// `--by 7am`, `--by 19:30`, `--by tomorrow-9am`. UTC is used
+    /// deliberately (reading the host timezone is unsound under the
+    /// multi-threaded runtime); use `--deadline` with an RFC 3339
+    /// offset for non-UTC interpretations. Alternative to `--deadline`
+    /// / `--within`. Echoed back as the resolved UTC instant on stderr.
+    #[arg(
+        long,
+        value_parser = deadline::parse_by,
+        conflicts_with_all = ["deadline", "within"],
+    )]
+    pub(crate) by: Option<deadline::ByTime>,
 
     /// Grid region (one of: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
     /// If omitted: `--profile`'s region, then `NAMI_REGION`, then the

@@ -39,12 +39,18 @@ semantics, or the `RunReport` schema — it is pure surface polish.
   announced on stderr. `materiality_threshold_pct` and repo-local
   `./nami.toml` discovery are deliberate future additions, not yet
   shipped.
-- **Relative deadlines.** Accept `--within 8h`, `--by 7am`, `--by
-  tomorrow-9am` alongside the RFC 3339 form. Parsing happens at the CLI
-  boundary; internally everything stays UTC `OffsetDateTime` and the
-  `RunReport`'s `deadline` is still RFC 3339. `7am` resolves against the
-  host's local timezone, normalized to UTC immediately — the resolved
-  value is echoed back on stderr so the user can verify it.
+- **Relative deadlines — shipped.** `--within 8h`, `--by 7am`,
+  `--by tomorrow-9am`, `--by 19:30` alongside the absolute
+  `--deadline <RFC 3339>`. The three flags are mutually exclusive
+  (enforced at the clap layer). Parsing happens at the CLI boundary;
+  internally everything stays UTC `OffsetDateTime` and the
+  `RunReport`'s `deadline` is still RFC 3339. The resolved instant is
+  echoed back on stderr ("`nami: deadline … (from --by 7am) [UTC]`")
+  so the user can verify. `--by` is **interpreted as UTC** —
+  `time::UtcOffset::current_local_offset` is unsound under tokio's
+  multi-threaded runtime, and silently guessing a timezone is
+  off-character. Non-UTC interpretations: use `--deadline` with an
+  explicit RFC 3339 offset.
 - **`nami init` — shipped.** Writes a minimal config file with the
   chosen `region` and a commented-out example profile at the same path
   the region resolver reads from. Refuses to clobber existing files

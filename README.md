@@ -116,11 +116,14 @@ without taking control of your job:
 
 ```sh
 # Try it first: real scheduling decision over real grid data, nothing runs.
-nami preview --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
+# Relative deadlines are accepted: --within <duration>, --by <time-of-day>,
+# or an absolute --deadline <RFC 3339 UTC>.
+nami preview --region MISO --within 8h --duration 3h -- cargo test
+nami preview --region MISO --by tomorrow-9am --duration 3h -- cargo test
 
 # When ready, let nami wrap the command end-to-end: wait for the chosen
 # window, spawn the process, forward signals, propagate the exit code.
-nami run --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
+nami run --region MISO --within 8h --duration 3h -- cargo test
 
 # Refresh one region's slice of the local historical cache from EIA-930.
 EIA_API_KEY=… nami refresh --region MISO          # --weeks N (default 8)
@@ -184,8 +187,20 @@ actually sourced from a profile is announced on stderr ("`nami: duration
 1m applied from profile nightly (no --duration given)`") so the
 resolution is never silent.
 
+Deadline forms accepted (mutually exclusive):
+
+- `--deadline <RFC 3339>` — absolute UTC instant, the strictest form.
+- `--within <duration>` — relative (`8h`, `90m`); deadline = `now + duration`.
+- `--by <time-of-day>` — next occurrence of `7am` / `7:30pm` /
+  `19:30` / `tomorrow-9am` / `today 23:00`. **Interpreted as UTC** —
+  reading the host timezone is unsound under tokio's runtime, and
+  silent timezone guessing is exactly the kind of guess this tool
+  refuses to make. The resolved instant is always echoed back on
+  stderr so you can verify; for non-UTC interpretations, use
+  `--deadline` with an explicit RFC 3339 offset (e.g.
+  `2026-05-20T07:00:00-04:00`).
+
 > **Coming next** (see [`docs/product-roadmap.md`](docs/product-roadmap.md)):
-> relative deadlines on the CLI itself (`--within 8h`, `--by 7am`),
 > `nami doctor` for richer environment diagnostics, and shell
 > completions.
 

@@ -56,6 +56,7 @@ pub(crate) enum CacheState {
 pub fn run(args: RunArgs) -> Result<()> {
     let now = OffsetDateTime::now_utc();
     let mut args = args;
+    crate::deadline::normalize(&mut args, now)?;
     if let Some(name) = args.profile.clone() {
         let profile = crate::profile::load_profile(&name, now)?;
         crate::profile::merge_into(&mut args, profile);
@@ -469,6 +470,8 @@ mod tests {
             profile: None,
             duration: Some(Duration::hours(dur_h)),
             deadline: Some(deadline),
+            within: None,
+            by: None,
             region,
             report: None,
             quiet: false,
