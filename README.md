@@ -1,7 +1,15 @@
 # nami
 
-A conservative, uncertainty-aware, public-data carbon-aware scheduler for
-flexible compute jobs.
+**Run deferrable developer jobs when the grid is likely cleaner — and
+know when nami is guessing.**
+
+A single-binary Rust CLI for jobs that need to *finish* by a deadline,
+not start immediately: nightly CI, batch ETL, embedding/index rebuilds,
+model evals, docs generation, backups. nami estimates which upcoming
+hour has the lowest average carbon intensity using only free public
+data, executes your command in that window, and writes an auditable
+report — refusing to recommend when the difference isn't meaningful or
+the data isn't strong enough.
 
 ## What
 
@@ -64,24 +72,71 @@ Concretely, `nami`:
 - Falls back loudly, never silently. A static-fallback decision is
   marked as such in the report; a stale-cache decision is too.
 
+## Honest by design
+
+The honesty is the value proposition, not a limitation to apologize for.
+Concretely, every nami number is:
+
+- **Estimated average, not marginal.** nami never claims marginal
+  emissions; the report labels which signal produced each figure.
+- **Bounded by a materiality threshold.** Below 5% improvement over
+  running now (the default), nami does not recommend deferring —
+  forecast noise often exceeds that.
+- **Refused, not guessed, when the data won't support a claim.** Missing
+  cache, sparse samples, foreign data, or sub-threshold differences all
+  yield an explicit refusal with reason and confidence.
+- **Auditable.** Each `RunReport` ties its numbers back to the EIA-930
+  observations, the pinned eGRID release, the forecast methodology
+  version, the materiality threshold, and the data freshness state.
+
+This stance is the project's identity. Commercial signals (marginal
+emissions APIs, paid forecasters) could in principle slot into the
+provider-capability abstraction as opt-in modes later, but they will
+never become the default — see `docs/product-roadmap.md`.
+
+## Use it for
+
+Workloads with a natural finish-by deadline and no human waiting on
+them — the kinds of jobs an engineer is already willing to defer
+overnight or to the next morning:
+
+- **Nightly CI / test suites** that must be green by start of day.
+- **Embedding or vector-index rebuilds** with a daily cadence.
+- **Batch ETL / data-warehouse transforms** before a morning report.
+- **Documentation / static-site generation** for a release deadline.
+- **Local model-evaluation suites** before a check-in.
+
+Concrete commands, sample output, and the cases where nami is the
+*wrong* tool live in [`docs/use-cases.md`](docs/use-cases.md).
+
 ## CLI
 
-```sh
-# Schedule + run a command in an estimated lower-carbon hour before the deadline
-nami run --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
+Start with `preview` — it shows nami's actual recommendation instantly,
+without taking control of your job:
 
-# Same decision, but only print it — do not run anything
+```sh
+# Try it first: real scheduling decision over real grid data, nothing runs.
 nami preview --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
 
-# Refresh one region's slice of the local historical cache from EIA-930
+# When ready, let nami wrap the command end-to-end: wait for the chosen
+# window, spawn the process, forward signals, propagate the exit code.
+nami run --region MISO --deadline 2026-05-15T12:00:00Z --duration 3h -- cargo test
+
+# Refresh one region's slice of the local historical cache from EIA-930.
 EIA_API_KEY=… nami refresh --region MISO          # --weeks N (default 8)
 
-# Print the historical-pattern forecast points + confidence for a region
+# Inspect the historical-pattern forecast curve over a horizon.
 nami forecast --region MISO --horizon 24h
 
-# Cache freshness, data sources, supported regions (+ optional report summary)
+# Cache freshness, data sources, supported regions (+ optional report summary).
 nami status [--report run-report.json]
 ```
+
+> **Coming next** (see [`docs/product-roadmap.md`](docs/product-roadmap.md)):
+> named profiles in `nami.toml` so `nami run nightly` replaces the long
+> flag list, and relative deadlines (`--within 8h`, `--by 7am`) so you
+> don't hand-type an RFC 3339 timestamp. The current flag surface still
+> works and is the engine those ergonomics will sit on.
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
   `--duration` (`30s`/`45m`/`2h`/`1d`), `--report <path>` (JSON
@@ -119,11 +174,16 @@ all in place, with live-API tests gated behind the `live-eia` feature.
 Deterministic region resolution (flag / `NAMI_REGION` env / config file)
 is in; IP-based auto-detection remains deferred (would add a third-party
 network call and a spatial dependency, and isn't aligned with the
-project's refuse-rather-than-guess stance).
+project's refuse-rather-than-guess stance). The next work — ergonomics
+(`nami.toml` profiles, relative deadlines, `nami init`, `nami doctor`)
+and longitudinal reports — is laid out in
+[`docs/product-roadmap.md`](docs/product-roadmap.md).
 
 See:
 
 - `docs/project-brief.md` — scope, non-goals, roadmap (authoritative)
+- `docs/use-cases.md` — what to actually use nami for (and what not to)
+- `docs/product-roadmap.md` — ergonomics-first roadmap (Phases A–D)
 - `docs/methodology.md` — the math, with caveats
 - `docs/public-data-sources.md` — what we use and what we don't
 - `docs/confidence-and-materiality.md` — uncertainty model

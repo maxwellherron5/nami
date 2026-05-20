@@ -43,6 +43,8 @@ The full design rationale, scope decisions, and roadmap live in `docs/project-br
 
 10. **Signal handling is a correctness concern, not a polish concern.** SIGINT during the wait phase cancels the schedule cleanly. SIGINT during the run forwards to the child. Exit codes propagate. Get this right early.
 
+11. **Product positioning sits alongside the engineering thesis — they are not the same thing.** In product terms `nami` is a deadline-aware runner for deferrable developer workloads (nightly CI, batch ETL, embedding rebuilds, evals, docs gen, backups); carbon-aware scheduling is the differentiator. A feature can advance the *product wedge* (ergonomics, profiles, reports, integration recipes) without touching methodology, and vice versa. Don't collapse one framing into the other when designing or reviewing changes. See `docs/project-brief.md`'s "Product positioning" section and `docs/product-roadmap.md`. Identity-violating ergonomics shortcuts (e.g. defaulting to a commercial provider for broader appeal) remain off-limits — item 2 stands.
+
 ---
 
 ## Core project thesis
