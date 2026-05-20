@@ -33,6 +33,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "signal", "time", "fs", "io-util"] }
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
 # Unix signal forwarding to the wrapped child (kill(2)); see nami-cli run.
 libc = "0.2"
 time = { version = "0.3", features = ["serde", "serde-well-known", "macros", "formatting", "parsing"] }

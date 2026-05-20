@@ -70,10 +70,14 @@ semantics, or the `RunReport` schema — it is pure surface polish.
   region resolver and cache/freshness logic the scheduling path uses,
   so a green `nami doctor` means `nami preview` / `nami run` will not
   fall back due to a missing precondition.
-- **Friendlier output.** Shell completions (bash/zsh/fish). Cleaner
-  refusal messages that lead with the user's next action ("set
-  `NAMI_REGION` to one of …"). The unimplemented-subcommand panic path
-  is already gone, but the same care applies to any future stub.
+- **Friendlier output — shipped.** Shell completions via `nami
+  completions <shell>` (bash / zsh / fish / powershell / elvish),
+  derived from the live clap tree so they stay in sync with new
+  subcommands automatically. Refusal messages were rewritten along
+  the way to lead with the user's next action (the region-resolver
+  "no region: pass --region, set NAMI_REGION, or …" message is the
+  archetype; `nami doctor` extends the same pattern to every
+  precondition with an explicit `→ <fix command>` line).
 
 ### Non-goals for Phase A
 

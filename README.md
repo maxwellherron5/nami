@@ -138,6 +138,11 @@ nami status [--report run-report.json]
 # fix per failing check. Exits nonzero on failures; --strict also exits
 # nonzero on warnings (useful as a CI gate before scheduling).
 nami doctor [--region <BA>] [--strict]
+
+# Shell completions: pipe the generated script to your completion dir.
+nami completions bash > ~/.local/share/bash-completion/completions/nami
+nami completions zsh  > ~/.local/share/zsh/site-functions/_nami
+nami completions fish > ~/.config/fish/completions/nami.fish
 ```
 
 ### First-time setup with `nami init`
@@ -205,8 +210,10 @@ Deadline forms accepted (mutually exclusive):
   `--deadline` with an explicit RFC 3339 offset (e.g.
   `2026-05-20T07:00:00-04:00`).
 
-> **Coming next** (see [`docs/product-roadmap.md`](docs/product-roadmap.md)):
-> shell completions.
+> Phase A (lovable CLI) is complete; the roadmap's next focus is
+> **Phase B — reports as a product** (longitudinal `nami report
+> summary`, `nami explain`). See
+> [`docs/product-roadmap.md`](docs/product-roadmap.md).
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
   `--duration` (`30s`/`45m`/`2h`/`1d`), `--report <path>` (JSON

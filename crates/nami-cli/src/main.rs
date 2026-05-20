@@ -11,6 +11,7 @@ use tracing_subscriber::EnvFilter;
 
 use nami_core::Region;
 
+mod completions;
 mod deadline;
 mod doctor;
 mod forecast;
@@ -64,6 +65,12 @@ enum Command {
     /// tagging and a suggested fix per failing check. Exits nonzero
     /// on any failure (and with `--strict`, on warnings too).
     Doctor(DoctorArgs),
+
+    /// Print a shell completion script (bash / zsh / fish / powershell
+    /// / elvish) for the current CLI surface to stdout. Pipe to the
+    /// shell's completion directory; the script is derived from the
+    /// live clap tree, so it stays in sync with new subcommands.
+    Completions(CompletionsArgs),
 }
 
 /// Args for `nami run` and `nami preview`.
@@ -175,6 +182,13 @@ struct ForecastArgs {
     /// Look-back window, in weeks, for the historical-pattern model.
     #[arg(long, default_value_t = nami_carbon_eia::DEFAULT_FORECAST_WEEKS)]
     weeks: u32,
+}
+
+/// Args for `nami completions`.
+#[derive(Debug, clap::Args)]
+struct CompletionsArgs {
+    /// Shell to generate completions for.
+    shell: clap_complete::Shell,
 }
 
 /// Args for `nami doctor`.
@@ -303,6 +317,7 @@ fn main() -> Result<()> {
         Command::Refresh(args) => refresh(args),
         Command::Init(args) => init::run(args),
         Command::Doctor(args) => doctor::run(args),
+        Command::Completions(args) => completions::run(args),
     }
 }
 
