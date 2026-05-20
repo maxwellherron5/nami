@@ -735,9 +735,11 @@ dependencies = [
  "nami-core",
  "nami-region",
  "nami-scheduler",
+ "serde",
  "serde_json",
  "time",
  "tokio",
+ "toml",
  "tracing",
  "tracing-subscriber",
 ]

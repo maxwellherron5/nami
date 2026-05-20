@@ -13,6 +13,7 @@ use nami_core::Region;
 
 mod forecast;
 mod preview;
+mod profile;
 mod run;
 mod sink;
 mod status;
@@ -54,16 +55,24 @@ enum Command {
 /// Args for `nami run` and `nami preview`.
 #[derive(Debug, clap::Args)]
 struct RunArgs {
+    /// Named profile from the nami config file to source defaults from.
+    /// Anything supplied on the CLI overrides the profile.
+    #[arg(long)]
+    pub(crate) profile: Option<String>,
+
     /// How long the job is expected to take, e.g. `2h`, `90m`, `45s`.
-    #[arg(long, value_parser = parse_duration)]
-    pub(crate) duration: Duration,
+    /// Required unless `--profile` supplies a value.
+    #[arg(long, value_parser = parse_duration, required_unless_present = "profile")]
+    pub(crate) duration: Option<Duration>,
 
     /// Latest UTC instant the job is allowed to *finish*, RFC 3339 format.
-    #[arg(long, value_parser = parse_datetime)]
-    pub(crate) deadline: time::OffsetDateTime,
+    /// Required unless `--profile` supplies a value (via `deadline` or `within`).
+    #[arg(long, value_parser = parse_datetime, required_unless_present = "profile")]
+    pub(crate) deadline: Option<time::OffsetDateTime>,
 
     /// Grid region (one of: CAISO, ERCOT, MISO, PJM, NYISO, ISONE, SPP).
-    /// If omitted: `NAMI_REGION`, then `region` in the nami config file.
+    /// If omitted: `--profile`'s region, then `NAMI_REGION`, then the
+    /// `region` key in the nami config file.
     #[arg(long)]
     pub(crate) region: Option<Region>,
 
@@ -83,7 +92,8 @@ struct RunArgs {
     pub(crate) log: Option<std::path::PathBuf>,
 
     /// The command to wrap. Everything after `--` is forwarded verbatim.
-    #[arg(last = true, required = true)]
+    /// Required unless `--profile` supplies a `command`.
+    #[arg(last = true, required_unless_present = "profile")]
     pub(crate) command: Vec<String>,
 }
 

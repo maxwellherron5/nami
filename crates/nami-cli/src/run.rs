@@ -38,6 +38,12 @@ const GRACE_PERIOD: std::time::Duration = std::time::Duration::from_secs(10);
 /// process with the child's exit code (or 0 on a cancelled wait, or 1 on
 /// a refusal). It returns `Err` only for setup failures before scheduling.
 pub async fn run(args: RunArgs) -> Result<()> {
+    let now = OffsetDateTime::now_utc();
+    let mut args = args;
+    if let Some(name) = args.profile.clone() {
+        let profile = crate::profile::load_profile(&name, now)?;
+        crate::profile::merge_into(&mut args, profile);
+    }
     let region = crate::resolve_region(args.region)?;
     let args = RunArgs {
         region: Some(region),
@@ -62,7 +68,6 @@ pub async fn run(args: RunArgs) -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sighup = signal(SignalKind::hangup())?;
 
-    let now = OffsetDateTime::now_utc();
     let cache = load_cache(DEFAULT_CACHE_PATH, now);
     let mut report = assemble(&args, now, cache)?;
 

@@ -16,8 +16,8 @@
 //! "guaranteed", "real-time", or "precise").
 
 use anyhow::{Result, anyhow};
-use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
+use time::{Duration, OffsetDateTime};
 
 use nami_carbon_eia::{
     DEFAULT_CACHE_PATH, DEFAULT_FORECAST_WEEKS, DEFAULT_MAX_CACHE_AGE, HistoricalCache,
@@ -54,12 +54,17 @@ pub(crate) enum CacheState {
 /// Run `nami preview`: assemble the report, print a human summary, and
 /// (if `--report`) write the JSON report.
 pub fn run(args: RunArgs) -> Result<()> {
+    let now = OffsetDateTime::now_utc();
+    let mut args = args;
+    if let Some(name) = args.profile.clone() {
+        let profile = crate::profile::load_profile(&name, now)?;
+        crate::profile::merge_into(&mut args, profile);
+    }
     let region = crate::resolve_region(args.region)?;
     let args = RunArgs {
         region: Some(region),
         ..args
     };
-    let now = OffsetDateTime::now_utc();
     let cache = load_cache(DEFAULT_CACHE_PATH, now);
     let report = assemble(&args, now, cache)?;
 
@@ -95,10 +100,16 @@ pub(crate) fn assemble(
     let region = args
         .region
         .ok_or_else(|| anyhow!("internal: region was not resolved before assemble"))?;
+    let duration = args
+        .duration
+        .ok_or_else(|| anyhow!("internal: duration was not set before assemble"))?;
+    let deadline = args
+        .deadline
+        .ok_or_else(|| anyhow!("internal: deadline was not set before assemble"))?;
     let job = JobSpec {
         command: args.command.clone(),
-        estimated_duration: args.duration,
-        deadline: args.deadline,
+        estimated_duration: duration,
+        deadline,
         region,
     };
     job.validate(now).map_err(|e| anyhow!("invalid job: {e}"))?;
@@ -154,7 +165,8 @@ pub(crate) fn assemble(
                 command,
                 cmd_args,
                 region,
-                args,
+                duration,
+                deadline,
                 now,
                 base_warnings(),
                 Some(reason),
@@ -216,8 +228,8 @@ pub(crate) fn assemble(
             command: command.clone(),
             args: cmd_args.to_vec(),
             region,
-            deadline: args.deadline,
-            estimated_duration: args.duration,
+            deadline,
+            estimated_duration: duration,
             decision,
             run_now_estimate,
             selected_window_estimate,
@@ -241,7 +253,8 @@ pub(crate) fn assemble(
         command,
         cmd_args,
         region,
-        args,
+        duration,
+        deadline,
         now,
         base_warnings(),
         fallback_reason,
@@ -266,7 +279,8 @@ fn static_report(
     command: &str,
     cmd_args: &[String],
     region: Region,
-    args: &RunArgs,
+    duration: Duration,
+    deadline: OffsetDateTime,
     now: OffsetDateTime,
     mut warnings: Vec<String>,
     fallback_reason: Option<String>,
@@ -278,7 +292,7 @@ fn static_report(
         .ok()
         .map(|baseline| WindowEstimate {
             start: now,
-            duration: args.duration,
+            duration,
             mean_intensity: baseline,
             confidence: confidence.clone(),
         });
@@ -295,8 +309,8 @@ fn static_report(
         command: command.to_string(),
         args: cmd_args.to_vec(),
         region,
-        deadline: args.deadline,
-        estimated_duration: args.duration,
+        deadline,
+        estimated_duration: duration,
         decision: static_fallback_decision(confidence),
         run_now_estimate,
         selected_window_estimate: None,
@@ -452,8 +466,9 @@ mod tests {
 
     fn args_for(region: Option<Region>, deadline: OffsetDateTime, dur_h: i64) -> RunArgs {
         RunArgs {
-            duration: Duration::hours(dur_h),
-            deadline,
+            profile: None,
+            duration: Some(Duration::hours(dur_h)),
+            deadline: Some(deadline),
             region,
             report: None,
             quiet: false,

@@ -132,11 +132,45 @@ nami forecast --region MISO --horizon 24h
 nami status [--report run-report.json]
 ```
 
+### Profiles
+
+Hand-typing `--region`, `--duration`, and an RFC 3339 `--deadline` on
+every invocation gets old fast. Define a profile in the nami config
+file (`$NAMI_CONFIG`, else `$XDG_CONFIG_HOME/nami/config.toml`, else
+`$HOME/.config/nami/config.toml`):
+
+```toml
+region = "MISO"            # default for any subcommand needing a region
+
+[profiles.nightly]
+region   = "MISO"          # optional: override the file-level default
+duration = "2h"            # how long the job is expected to take
+within   = "8h"            # deadline = now + 8h at invocation time
+command  = ["cargo", "test", "--workspace"]
+
+[profiles.reindex]
+duration = "30m"
+deadline = "2026-05-20T13:00:00Z"   # absolute alternative to `within`
+command  = ["python", "rebuild_index.py"]
+```
+
+Then:
+
+```sh
+nami preview --profile nightly         # all defaults from the profile
+nami run     --profile nightly         # actually run it
+nami run     --profile nightly --region CAISO -- echo override   # CLI wins
+```
+
+Anything passed on the CLI overrides the profile, and every field
+actually sourced from a profile is announced on stderr ("`nami: duration
+1m applied from profile nightly (no --duration given)`") so the
+resolution is never silent.
+
 > **Coming next** (see [`docs/product-roadmap.md`](docs/product-roadmap.md)):
-> named profiles in `nami.toml` so `nami run nightly` replaces the long
-> flag list, and relative deadlines (`--within 8h`, `--by 7am`) so you
-> don't hand-type an RFC 3339 timestamp. The current flag surface still
-> works and is the engine those ergonomics will sit on.
+> relative deadlines on the CLI itself (`--within 8h`, `--by 7am`),
+> `nami init` for guided setup, and `nami doctor` for environment
+> diagnostics.
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),
   `--duration` (`30s`/`45m`/`2h`/`1d`), `--report <path>` (JSON

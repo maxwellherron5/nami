@@ -18,7 +18,9 @@ nami-carbon-static = { workspace = true }
 nami-scheduler = { workspace = true }
 nami-region = { workspace = true }
 anyhow = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
+toml = { workspace = true }
 clap = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

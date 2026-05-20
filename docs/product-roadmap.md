@@ -28,12 +28,17 @@ semantics, or the `RunReport` schema — it is pure surface polish.
 
 ### Scope
 
-- **`nami.toml` profiles.** A user-level (`~/.config/nami/config.toml`)
-  or repo-local config file holding named profiles. The existing
-  `region = "<BA>"` resolution key stays; profiles live under
-  `[profiles.<name>]` with fields `duration`, `deadline` or `within`,
-  optional `materiality_threshold_pct`, optional default `region`
-  override. Usage: `nami run nightly`, `nami preview reindex`.
+- **`nami.toml` profiles — shipped.** Named profiles live under
+  `[profiles.<name>]` in the existing nami config file
+  (`$NAMI_CONFIG` / `$XDG_CONFIG_HOME/nami/config.toml` / `~/.config/
+  nami/config.toml`), alongside the existing `region = "<BA>"` key.
+  Fields: `region`, `duration`, `within` (= `now + within`) or
+  `deadline` (RFC 3339), `command`. Usage:
+  `nami preview --profile nightly`, `nami run --profile nightly`.
+  CLI flags override profile fields; each profile-sourced field is
+  announced on stderr. `materiality_threshold_pct` and repo-local
+  `./nami.toml` discovery are deliberate future additions, not yet
+  shipped.
 - **Relative deadlines.** Accept `--within 8h`, `--by 7am`, `--by
   tomorrow-9am` alongside the RFC 3339 form. Parsing happens at the CLI
   boundary; internally everything stays UTC `OffsetDateTime` and the
