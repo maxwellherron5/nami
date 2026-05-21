@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily nami refresh
+
+[Timer]
+# Once a day at 01:00 local. Tune to whenever fresh EIA-930 data is
+# typically available for your grid (it lags ~1-2h).
+OnCalendar=*-*-* 01:00:00
+# Catch up if the host was asleep when the timer fired.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily nightly carbon-aware workload
+
+[Timer]
+# Kickoff 22:00 local; nami may defer up to 6 hours into the night,
+# bounded by the --within in nami-nightly.service.
+OnCalendar=*-*-* 22:00:00
+# Catch up if the host was asleep when the timer fired.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

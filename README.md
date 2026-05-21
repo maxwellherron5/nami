@@ -294,6 +294,8 @@ See:
 - `docs/public-data-sources.md` — what we use and what we don't
 - `docs/confidence-and-materiality.md` — uncertainty model
 - `docs/eia-api-notes.md` — EIA-930 API shape, fetch, and refresh notes
+- `examples/integrations/` — copy-paste recipes for GitHub Actions,
+  cron, and systemd (no published packages by design)
 - `CLAUDE.md` — operational instructions for contributors
 
 ## License

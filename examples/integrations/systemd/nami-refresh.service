@@ -1,0 +1,26 @@
+# nami refresh — pulls fresh EIA-930 history into the local cache.
+#
+# Installs as a user-level unit (systemctl --user). For a system-level
+# install, move to /etc/systemd/system/ and remove the [Install] /
+# WantedBy line if running per-machine instead of per-user.
+#
+# EIA_API_KEY is sourced via LoadCredential, which is the modern
+# systemd pattern: the key never lives in the unit file and is only
+# visible to this single process.
+
+[Unit]
+Description=nami: refresh EIA-930 historical cache
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Path to the secret file (chmod 600). Pick whatever directory you
+# already use for service secrets.
+LoadCredential=eia-api-key:%h/.config/nami/eia-api-key
+Environment=NAMI_REGION=MISO
+ExecStart=/bin/sh -c 'EIA_API_KEY=$(cat ${CREDENTIALS_DIRECTORY}/eia-api-key) %h/.cargo/bin/nami refresh'
+
+# Don't restart on failure: a refresh hiccup just means the next run
+# uses slightly older cache, surfaced loudly by `nami doctor`.
+Restart=no

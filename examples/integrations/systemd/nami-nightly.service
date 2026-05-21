@@ -1,0 +1,31 @@
+# Example nightly workload wrapped under `nami run`.
+#
+# Two things to edit before installing:
+#   1. The `WorkingDirectory=` to your project.
+#   2. The `ExecStart=` command after `--` to the actual workload.
+#
+# Because `nami run` waits in the foreground, this unit is Type=oneshot
+# (it returns when the wrapped command exits). The exit code is the
+# wrapped command's, propagated by nami.
+
+[Unit]
+Description=nami: nightly integration test (carbon-aware)
+After=network-online.target nami-refresh.service
+Wants=nami-refresh.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/my-repo
+Environment=NAMI_REGION=MISO
+
+# Bounded wait + auto-archived report (the default state dir, where
+# `nami report summary` can later aggregate).
+ExecStart=%h/.cargo/bin/nami run --within 6h --duration 1h -- /usr/bin/make integration-test
+
+# Don't auto-restart: the wrapped workload's exit code is meaningful
+# and shouldn't be swallowed by a restart loop.
+Restart=no
+
+# Hardening (optional but cheap; tighten to your environment).
+NoNewPrivileges=true
+PrivateTmp=true

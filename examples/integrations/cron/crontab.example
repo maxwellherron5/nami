@@ -1,0 +1,13 @@
+# nami carbon-aware nightly job (crontab entry)
+#
+# Install with `crontab -e` and paste the line below. Edit the path
+# and the desired kickoff time. nami picks the actual run hour within
+# the --within window inside the wrapper script; the cron time is just
+# when the wait phase starts.
+#
+# Times in cron are interpreted in the cron daemon's timezone (often
+# the host's local time). nami itself is UTC throughout; mismatches
+# don't break anything but are worth being aware of.
+
+# Kickoff at 22:00 local; nami may defer up to 6 hours into the night.
+0 22 * * *  /home/you/.local/bin/nami-nightly.sh >> /home/you/.local/state/nami/nightly.log 2>&1

@@ -1,0 +1,95 @@
+# nami carbon-aware nightly workflow
+#
+# Copy to .github/workflows/nightly.yml and edit:
+#   - the `region` input default (or pass it via workflow_dispatch)
+#   - the actual workload step (`run: make integration-test`)
+#   - the EIA_API_KEY repository secret
+#
+# Two modes are illustrated below; pick one and delete the other:
+#
+#   1. ADVISORY  — `nami preview` computes the recommendation in <1s and
+#                  prints it. Use this in PR / push workflows where you
+#                  want visibility but don't want to actually defer.
+#                  Runner cost: negligible.
+#
+#   2. SCHEDULED — `nami run` actually waits until the chosen window
+#                  before spawning the workload. Use a SHORT --within
+#                  window (e.g. 1h) on GitHub-hosted runners — they
+#                  bill by the minute, so `--within 8h` will sit idle
+#                  for up to 8 hours of billable runner time.
+#                  Self-hosted runners make longer windows viable.
+
+name: nami carbon-aware nightly
+
+on:
+  schedule:
+    # Trigger at the start of the typical low-carbon window for your grid.
+    # Tune to your region; this is just a kickoff time, nami picks the actual hour.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "Balancing authority (CAISO/ERCOT/MISO/PJM/NYISO/ISONE/SPP)"
+        required: true
+        default: "MISO"
+
+env:
+  NAMI_REGION: ${{ github.event.inputs.region || 'MISO' }}
+  EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+
+jobs:
+  carbon-aware-job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # cap total time including any --within wait
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install nami from source. Replace with a download step once you
+      # have a binary release URL. There is no published nami GitHub
+      # Action on purpose — this is a copy-paste recipe, not a hosted
+      # package.
+      - name: Install nami
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          cargo install --path crates/nami-cli --locked
+
+      - name: Refresh historical cache
+        run: nami refresh --region "$NAMI_REGION" --weeks 8
+
+      # Preflight: fail fast if anything is missing. --strict means
+      # warnings (e.g. stale cache, unset key) also exit nonzero.
+      - name: Preflight checks
+        run: nami doctor --region "$NAMI_REGION" --strict
+
+      # ── ADVISORY MODE ────────────────────────────────────────────
+      # Comment this block out if you're using the scheduled mode below.
+      - name: Preview decision (advisory)
+        run: |
+          nami preview --within 8h --duration 30m -- make integration-test \
+            | tee preview-output.txt
+
+      - name: Upload advisory output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nami-preview
+          path: preview-output.txt
+
+      # ── SCHEDULED MODE (mutually exclusive with the advisory block) ──
+      # Uncomment to actually defer the workload. Keep --within short on
+      # GitHub-hosted runners (they bill while nami waits). Self-hosted
+      # runners can use longer windows.
+      #
+      # - name: Run workload (carbon-aware, bounded wait)
+      #   run: |
+      #     mkdir -p nami-reports
+      #     nami run --within 1h --duration 30m \
+      #       --report-dir nami-reports \
+      #       -- make integration-test
+      #
+      # - name: Upload nami report
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: nami-report
+      #     path: nami-reports/

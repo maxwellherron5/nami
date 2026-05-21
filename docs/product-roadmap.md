@@ -139,26 +139,34 @@ defer, and by how much?" honestly, with audit data behind it.
 
 ---
 
-## Phase C — Integration recipes
+## Phase C — Integration recipes — shipped
 
-**Why:** the analysis is right that `nami` becomes meaningfully more
-useful when it's wired into existing workflows (CI runners, cron,
-systemd timers). The wrong way to ship that is to take on a Python
-package, a Kubernetes operator, or a JS-side action repo we'd have to
-maintain. The *right* way is **documented recipes** that compose the
-already-released binary with tools the user already runs.
+**Why:** `nami` becomes meaningfully more useful when wired into
+existing workflows (CI runners, cron, systemd timers). The wrong way
+to ship that is to take on a Python package, a Kubernetes operator,
+or a JS-side action repo we'd have to maintain. The *right* way is
+**documented recipes** that compose the already-released binary with
+tools the user already runs. All three live under
+[`examples/integrations/`](../examples/integrations/).
 
 ### Scope (all documentation, no new packages)
 
-- **GitHub Actions example.** A workflow snippet that installs the
-  released `nami` binary, runs `nami preview` against the workflow's
-  region (from a repo secret or matrix var), and posts the
-  recommendation as a step summary / PR comment. Optionally uses
-  `nami run` for jobs the team is willing to defer on hosted runners.
-- **`cron` and `systemd.timer` recipes.** How to wrap a nightly job in
-  `nami run` from a cron entry; the equivalent in a `systemd` unit.
-- **Shell-script orchestration.** The `examples/demo.sh` pattern,
-  generalized: refresh → preview → run → summarize.
+- **GitHub Actions example — shipped.** `examples/integrations/github-
+  action.yml` — nightly workflow with `EIA_API_KEY` as a repo secret,
+  `nami doctor --strict` as a preflight, and two mutually-exclusive
+  modes (advisory `nami preview` for PR visibility, or scheduled `nami
+  run --within 1h` for actual deferral with the GitHub-runner cost
+  caveat called out).
+- **`cron` recipe — shipped.** `examples/integrations/cron/
+  nami-nightly.sh` + `crontab.example` — a wrapper script that sources
+  an env file, runs `nami doctor --strict` + `refresh` + `run
+  --within 6h`, and logs to a state file. Cron is where long
+  `--within` windows actually make sense (no per-minute billing).
+- **`systemd.timer` recipe — shipped.** `examples/integrations/
+  systemd/` — paired `nami-refresh.{service,timer}` and `nami-nightly.
+  {service,timer}` units, with `LoadCredential=` for the `EIA_API_KEY`
+  (modern systemd secret pattern — the key never lives in the unit
+  file) and `Persistent=true` timers that catch up after sleep.
 
 ### Non-goals for Phase C
 
@@ -233,5 +241,5 @@ A reasonable exit criterion for "done with each phase":
 |---|---|
 | A | A first-time user can go from clone to first `nami run nightly` in under five minutes, without reading any docs beyond `nami init`. |
 | B | ~~`nami report summary --since 30d` answers "how often did `nami` defer, and what was the average improvement when it did?" from real reports on disk.~~ **Shipped.** Reports auto-archive; `nami report summary` aggregates; `nami report explain` narrates a single decision. |
-| C | The `examples/` directory has a CI recipe, a cron recipe, and a `systemd.timer` recipe that each run unchanged against the released binary. |
+| C | ~~The `examples/` directory has a CI recipe, a cron recipe, and a `systemd.timer` recipe that each run unchanged against the released binary.~~ **Shipped** — `examples/integrations/`. |
 | D | A `nami forecast` call shows both the historical-pattern *and* the demand-binned model side-by-side, with confidence and methodology labels distinct, and a documented `nami status` provider-availability matrix per region. |
