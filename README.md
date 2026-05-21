@@ -143,6 +143,10 @@ nami doctor [--region <BA>] [--strict]
 nami completions bash > ~/.local/share/bash-completion/completions/nami
 nami completions zsh  > ~/.local/share/zsh/site-functions/_nami
 nami completions fish > ~/.config/fish/completions/nami.fish
+
+# Aggregate over the auto-archived reports (decisions, improvement when
+# deferred, confidence distribution, refusal reasons, per-region counts).
+nami report summary --since 30d [--region <BA>] [--json]
 ```
 
 ### First-time setup with `nami init`

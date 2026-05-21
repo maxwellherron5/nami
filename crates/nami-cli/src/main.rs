@@ -18,6 +18,7 @@ mod forecast;
 mod init;
 mod preview;
 mod profile;
+mod report;
 mod reports;
 mod run;
 mod sink;
@@ -72,6 +73,10 @@ enum Command {
     /// shell's completion directory; the script is derived from the
     /// live clap tree, so it stays in sync with new subcommands.
     Completions(CompletionsArgs),
+
+    /// Operations over the auto-archived reports directory. Currently:
+    /// `nami report summary --since 30d`.
+    Report(ReportArgs),
 }
 
 /// Args for `nami run` and `nami preview`.
@@ -193,6 +198,40 @@ struct ForecastArgs {
     /// Look-back window, in weeks, for the historical-pattern model.
     #[arg(long, default_value_t = nami_carbon_eia::DEFAULT_FORECAST_WEEKS)]
     weeks: u32,
+}
+
+/// Args for `nami report`.
+#[derive(Debug, clap::Args)]
+struct ReportArgs {
+    #[command(subcommand)]
+    sub: ReportSubcommand,
+}
+
+#[derive(Debug, clap::Subcommand)]
+enum ReportSubcommand {
+    /// Aggregate over the auto-archived reports directory.
+    Summary(SummaryArgs),
+}
+
+/// Args for `nami report summary`.
+#[derive(Debug, clap::Args)]
+struct SummaryArgs {
+    /// Time window to aggregate over (e.g. `30d`, `7d`, `24h`).
+    #[arg(long, value_parser = parse_duration, default_value = "30d")]
+    since: Duration,
+
+    /// Only include reports for this region.
+    #[arg(long)]
+    region: Option<Region>,
+
+    /// Reports directory to walk. Default: `$XDG_STATE_HOME/nami/reports`
+    /// (else `$HOME/.local/state/nami/reports`).
+    #[arg(long)]
+    reports_dir: Option<std::path::PathBuf>,
+
+    /// Emit JSON instead of the human-readable summary.
+    #[arg(long, default_value_t = false)]
+    json: bool,
 }
 
 /// Args for `nami completions`.
@@ -329,6 +368,7 @@ fn main() -> Result<()> {
         Command::Init(args) => init::run(args),
         Command::Doctor(args) => doctor::run(args),
         Command::Completions(args) => completions::run(args),
+        Command::Report(args) => report::run(args),
     }
 }
 

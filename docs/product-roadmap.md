@@ -111,11 +111,16 @@ defer, and by how much?" honestly, with audit data behind it.
   crashed run can't poison the directory `nami report summary` will
   later aggregate over. `nami preview` does not auto-archive (Phase B
   aggregations are about *actual* runs, not informational previews).
-- **`nami report summary --since 30d`.** Aggregates over the reports
-  directory: count of jobs scheduled, deferred, run-immediately,
-  refused; average estimated improvement when deferred; distribution
-  of confidence levels; most common refusal reasons. Output is
-  human-readable and JSON-emittable (`--json`).
+- **`nami report summary --since 30d` — shipped.** Walks the auto-
+  archived reports directory (date-partitioned, so a `--since 30d` walk
+  doesn't deserialize months we discard), filters by `--region` if
+  given, then aggregates: decisions (deferred / run-immediately /
+  refused), improvement statistics when deferred (mean / median /
+  range), confidence distribution, per-region counts, top refusal
+  reasons. Corrupt JSONs are counted and skipped rather than failing
+  the whole walk — a single bad file can't poison the aggregation.
+  Human-readable output by default; `--json` emits a stable schema
+  for scripts.
 - **`nami explain <report.json>`.** Renders the decision in prose: why
   the scheduler chose what it did, in terms of the materiality
   threshold, sample counts, freshness state, and which forecast hours
