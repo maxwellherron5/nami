@@ -228,20 +228,39 @@ fn exit_code(status: &ExitStatus) -> i32 {
         .unwrap_or_else(|| 128 + status.signal().unwrap_or(0))
 }
 
-/// Write the report to `--report` if given, otherwise print it (pretty
-/// JSON) to stdout so the run still leaves an auditable artifact.
+/// Persist the report. Resolution order is `--report` (a pinned exact
+/// path), then `--report-dir/<UTC-date>/<auto>.json`, then the default
+/// state dir (`$XDG_STATE_HOME/nami/reports` or
+/// `$HOME/.local/state/nami/reports`), then finally stdout when no
+/// state dir is determinable. Archive destinations are announced on
+/// stderr so the user always knows where the artifact landed.
 fn finalize(report: &RunReport, args: &RunArgs) {
-    if let Some(path) = &args.report {
-        if let Err(e) = JsonFileSink(path.clone()).record(report) {
-            eprintln!(
-                "nami: failed to write run report to {}: {e}",
-                path.display()
-            );
+    let target = crate::reports::resolve_default(args, report.region, report.submitted_at);
+    match target {
+        crate::reports::Target::Pinned(path) => {
+            if let Err(e) = JsonFileSink(path.clone()).record(report) {
+                eprintln!(
+                    "nami: failed to write run report to {}: {e}",
+                    path.display()
+                );
+            }
         }
-    } else {
-        match serde_json::to_string_pretty(report) {
-            Ok(json) => println!("{json}"),
-            Err(e) => eprintln!("nami: failed to serialize run report: {e}"),
+        crate::reports::Target::Archived(path) => match JsonFileSink(path.clone()).record(report) {
+            Ok(()) => eprintln!("nami: report archived to {}", path.display()),
+            Err(e) => eprintln!(
+                "nami: failed to archive run report at {}: {e}",
+                path.display()
+            ),
+        },
+        crate::reports::Target::Stdout => {
+            eprintln!(
+                "nami: no $XDG_STATE_HOME / $HOME set; falling back to printing the \
+                 report on stdout (use --report or --report-dir to control where it lands)"
+            );
+            match serde_json::to_string_pretty(report) {
+                Ok(json) => println!("{json}"),
+                Err(e) => eprintln!("nami: failed to serialize run report: {e}"),
+            }
         }
     }
 }

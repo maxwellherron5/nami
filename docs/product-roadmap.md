@@ -100,10 +100,17 @@ defer, and by how much?" honestly, with audit data behind it.
 
 ### Scope
 
-- **Reports directory convention.** Default `~/.local/state/nami/
-  reports/<UTC-date>/<run-id>.json` (or `$XDG_STATE_HOME` equivalent),
-  overridable via `--report-dir`. The existing `--report <path>` flag
-  still works and pins exactly one file.
+- **Reports directory convention — shipped.** `nami run` auto-archives
+  every `RunReport` to `$XDG_STATE_HOME/nami/reports/<UTC-date>/<auto>.json`
+  (else `$HOME/.local/state/nami/reports/...`); the path is announced on
+  stderr. `--report <path>` keeps pinning a single file (preferred for
+  CI artifacts); `--report-dir <dir>` overrides only the directory and
+  is mutually exclusive with `--report`. Filenames are
+  `<HH-MM-SS-nanos>-<BA>.json` — sortable, region-tagged, collision-
+  free without retry logic. Writes are atomic (temp-file + rename) so a
+  crashed run can't poison the directory `nami report summary` will
+  later aggregate over. `nami preview` does not auto-archive (Phase B
+  aggregations are about *actual* runs, not informational previews).
 - **`nami report summary --since 30d`.** Aggregates over the reports
   directory: count of jobs scheduled, deferred, run-immediately,
   refused; average estimated improvement when deferred; distribution

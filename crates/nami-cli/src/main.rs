@@ -18,6 +18,7 @@ mod forecast;
 mod init;
 mod preview;
 mod profile;
+mod reports;
 mod run;
 mod sink;
 mod status;
@@ -125,10 +126,20 @@ struct RunArgs {
     #[arg(long)]
     pub(crate) region: Option<Region>,
 
-    /// Path to write the JSON run report. If omitted, the report goes to
-    /// stdout at the end of the run.
-    #[arg(long)]
+    /// Pin the report to an exact file path. With this set, `nami run`
+    /// writes only to this file (no auto-archive). For `nami preview`,
+    /// the report is only written when this flag is given. Mutually
+    /// exclusive with `--report-dir`.
+    #[arg(long, conflicts_with = "report_dir")]
     pub(crate) report: Option<std::path::PathBuf>,
+
+    /// Override the auto-archive directory used by `nami run` when
+    /// `--report` is not given. The actual filename is
+    /// `<UTC-date>/<HH-MM-SS-nanos>-<BA>.json` inside this directory.
+    /// Default: `$XDG_STATE_HOME/nami/reports/` (else
+    /// `$HOME/.local/state/nami/reports/`). Ignored by `nami preview`.
+    #[arg(long, conflicts_with = "report")]
+    pub(crate) report_dir: Option<std::path::PathBuf>,
 
     /// Silence the wrapped command's stdout and stderr (`nami run` only).
     /// `nami`'s own decision summary is still printed.

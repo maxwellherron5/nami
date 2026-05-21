@@ -210,9 +210,29 @@ Deadline forms accepted (mutually exclusive):
   `--deadline` with an explicit RFC 3339 offset (e.g.
   `2026-05-20T07:00:00-04:00`).
 
+### Reports — auto-archived for later
+
+Every `nami run` writes its `RunReport` JSON to a discoverable
+location so the run is durable evidence later (Phase B aggregations
+build on this).
+
+- **`--report <path>`** pins the exact filename (still the right
+  choice for CI artifacts).
+- **`--report-dir <dir>`** uses an auto filename
+  (`<dir>/<UTC-date>/<HH-MM-SS-nanos>-<BA>.json`) — sortable by start
+  time, region-tagged, collision-free.
+- **Neither flag**: auto-archives into
+  `$XDG_STATE_HOME/nami/reports/` (else `$HOME/.local/state/nami/
+  reports/`). The path is announced on stderr after each run.
+- `--report` and `--report-dir` are mutually exclusive.
+
+`nami preview` is unchanged: it still writes only when `--report` is
+given, and never auto-archives (Phase B archives actual runs, not
+previews).
+
 > Phase A (lovable CLI) is complete; the roadmap's next focus is
-> **Phase B — reports as a product** (longitudinal `nami report
-> summary`, `nami explain`). See
+> finishing **Phase B — reports as a product** (`nami report summary`
+> and `nami explain`). See
 > [`docs/product-roadmap.md`](docs/product-roadmap.md).
 
 - `run` / `preview` share flags: `--region`, `--deadline` (RFC 3339 UTC),

@@ -474,6 +474,7 @@ mod tests {
             by: None,
             region,
             report: None,
+            report_dir: None,
             quiet: false,
             log: None,
             command: vec!["python".into(), "train.py".into()],
