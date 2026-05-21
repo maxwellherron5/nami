@@ -121,11 +121,15 @@ defer, and by how much?" honestly, with audit data behind it.
   the whole walk — a single bad file can't poison the aggregation.
   Human-readable output by default; `--json` emits a stable schema
   for scripts.
-- **`nami explain <report.json>`.** Renders the decision in prose: why
-  the scheduler chose what it did, in terms of the materiality
-  threshold, sample counts, freshness state, and which forecast hours
-  were considered. The existing `status --report` summary is the seed
-  for this.
+- **`nami report explain <report.json>` — shipped.** Renders the
+  decision in prose: branches on `StartAt` / `StartImmediately` /
+  `Refuse` so each outcome gets its own framing ("why did nami defer
+  / run now / refuse?"), then pulls the materiality threshold,
+  estimated improvement, run-now baseline, confidence level + sample
+  count, freshness, provider, methodology, and warnings into the
+  story. Placed under `nami report explain` (not top-level) for
+  cohesion with `nami report summary` — both are operations on
+  reports.
 
 ### Non-goals for Phase B
 
@@ -228,6 +232,6 @@ A reasonable exit criterion for "done with each phase":
 | Phase | Done when |
 |---|---|
 | A | A first-time user can go from clone to first `nami run nightly` in under five minutes, without reading any docs beyond `nami init`. |
-| B | `nami report summary --since 30d` answers "how often did `nami` defer, and what was the average improvement when it did?" from real reports on disk. |
+| B | ~~`nami report summary --since 30d` answers "how often did `nami` defer, and what was the average improvement when it did?" from real reports on disk.~~ **Shipped.** Reports auto-archive; `nami report summary` aggregates; `nami report explain` narrates a single decision. |
 | C | The `examples/` directory has a CI recipe, a cron recipe, and a `systemd.timer` recipe that each run unchanged against the released binary. |
 | D | A `nami forecast` call shows both the historical-pattern *and* the demand-binned model side-by-side, with confidence and methodology labels distinct, and a documented `nami status` provider-availability matrix per region. |

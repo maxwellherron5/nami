@@ -147,6 +147,11 @@ nami completions fish > ~/.config/fish/completions/nami.fish
 # Aggregate over the auto-archived reports (decisions, improvement when
 # deferred, confidence distribution, refusal reasons, per-region counts).
 nami report summary --since 30d [--region <BA>] [--json]
+
+# Friendly prose explanation of a single report: "why did nami choose
+# this?" — improvement %, materiality threshold, confidence + samples,
+# freshness, provenance, the specific decision reason in plain English.
+nami report explain ~/.local/state/nami/reports/2026-05-20/06-45-23-…-CAISO.json
 ```
 
 ### First-time setup with `nami init`

@@ -14,6 +14,7 @@ use nami_core::Region;
 mod completions;
 mod deadline;
 mod doctor;
+mod explain;
 mod forecast;
 mod init;
 mod preview;
@@ -211,6 +212,17 @@ struct ReportArgs {
 enum ReportSubcommand {
     /// Aggregate over the auto-archived reports directory.
     Summary(SummaryArgs),
+
+    /// Render a friendly prose explanation of a single report.
+    Explain(ExplainArgs),
+}
+
+/// Args for `nami report explain`.
+#[derive(Debug, clap::Args)]
+struct ExplainArgs {
+    /// Path to a `RunReport` JSON file (typically one auto-archived
+    /// under `$XDG_STATE_HOME/nami/reports/<UTC-date>/...`).
+    report: std::path::PathBuf,
 }
 
 /// Args for `nami report summary`.

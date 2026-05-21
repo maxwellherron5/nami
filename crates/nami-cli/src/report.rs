@@ -28,6 +28,7 @@ use crate::{ReportArgs, ReportSubcommand, SummaryArgs};
 pub fn run(args: ReportArgs) -> Result<()> {
     match args.sub {
         ReportSubcommand::Summary(s) => summary(s),
+        ReportSubcommand::Explain(e) => crate::explain::run(e),
     }
 }
 
